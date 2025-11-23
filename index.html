@@ -160,7 +160,7 @@
     </table>
   </section>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-jp/AV7pTHXKFFitvolG/GpNZgbf+168Q5e0siJmq9hw3rroWAtxEvsC0BpvyEukgqS0bkkCm1cWkI7xJ9N8DPg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     const STORAGE_KEY = 'bso-records';
     const IP_DETAILS = {
@@ -240,6 +240,11 @@
     }
 
     function buildPdf(record) {
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('Не удалось загрузить модуль PDF. Проверьте интернет-соединение и обновите страницу.');
+        throw new Error('jsPDF not loaded');
+      }
+
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       const lineHeight = 8;
@@ -289,8 +294,12 @@
     }
 
     function downloadPdf(record) {
-      const doc = buildPdf(record);
-      doc.save(`${record.number}.pdf`);
+      try {
+        const doc = buildPdf(record);
+        doc.save(`${record.number}.pdf`);
+      } catch (error) {
+        console.error('PDF generation failed', error);
+      }
     }
 
     function handleDownload(event) {
