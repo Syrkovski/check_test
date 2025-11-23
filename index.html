@@ -37,7 +37,7 @@
       display: grid;
       grid-template-columns: 1fr;
       gap: 12px;
-      max-width: 420px;
+      max-width: 480px;
     }
 
     label {
@@ -45,6 +45,22 @@
       flex-direction: column;
       gap: 6px;
       font-size: 14px;
+    }
+
+    .field-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .field-row label {
+      flex: 1;
+    }
+
+    .toggle-edit {
+      margin-top: 22px;
+      white-space: nowrap;
+      height: 44px;
     }
 
     input, select, textarea, button {
@@ -109,14 +125,20 @@
     <h2 id="create-title">Создать БСО</h2>
     <div class="notice" id="current-number">Номер будет сгенерирован автоматически по формуле YYYYMMDD-XXX.</div>
     <form id="bso-form">
-      <label>
-        Клиент
-        <input type="text" id="client" name="client" placeholder="ФИО или Физлицо" required />
-      </label>
-      <label>
-        Услуга
-        <input type="text" id="service" name="service" required />
-      </label>
+      <div class="field-row">
+        <label>
+          Клиент
+          <input type="text" id="client" name="client" value="Физлицо" readonly required />
+        </label>
+        <button type="button" class="toggle-edit" data-target="client">Изменить</button>
+      </div>
+      <div class="field-row">
+        <label>
+          Услуга
+          <input type="text" id="service" name="service" value="Образовательные услуги" readonly required />
+        </label>
+        <button type="button" class="toggle-edit" data-target="service">Изменить</button>
+      </div>
       <label>
         Сумма, ₽
         <input type="number" id="amount" name="amount" min="0" step="0.01" required />
@@ -125,14 +147,20 @@
         Время оплаты
         <input type="time" id="time" name="time" required />
       </label>
-      <label>
-        Способ оплаты
-        <select id="payment" name="payment" required>
-          <option value="Наличные">Наличные</option>
-          <option value="Безнал">Безнал</option>
-          <option value="СБП">СБП</option>
-        </select>
-      </label>
+      <div class="field-row">
+        <label>
+          Способ оплаты
+          <input
+            type="text"
+            id="payment"
+            name="payment"
+            value="безналичная (перевод по QR-коду на расчётный счёт ИП)"
+            readonly
+            required
+          />
+        </label>
+        <button type="button" class="toggle-edit" data-target="payment">Изменить</button>
+      </div>
       <label>
         Комментарий (необязательно)
         <textarea id="comment" name="comment"></textarea>
@@ -166,7 +194,7 @@
     let fontRegistered = false;
 
     const STORAGE_KEY = 'bso-records';
-    const IP_DETAILS = {
+    let ipDetails = {
       name: 'ИП Иванов Иван Иванович',
       inn: 'ИНН 123456789012',
       ogrnip: 'ОГРНИП 123456789012345',
@@ -180,6 +208,47 @@
     const registryBody = document.querySelector('#registry tbody');
     const currentNumberEl = document.getElementById('current-number');
     const timeInput = document.getElementById('time');
+    const toggleButtons = document.querySelectorAll('.toggle-edit');
+
+    async function loadVendorDetails() {
+      try {
+        const response = await fetch('vendor.json');
+        if (!response.ok) throw new Error(`Unexpected status ${response.status}`);
+        const data = await response.json();
+        ipDetails = { ...ipDetails, ...data };
+      } catch (error) {
+        console.warn('Не удалось загрузить данные продавца из vendor.json', error);
+      }
+    }
+
+    function setReadonlyState(button, isReadonly) {
+      const input = document.getElementById(button.dataset.target);
+      if (!input) return;
+      if (isReadonly) {
+        input.setAttribute('readonly', 'readonly');
+        button.textContent = 'Изменить';
+      } else {
+        input.removeAttribute('readonly');
+        button.textContent = 'Зафиксировать';
+        input.focus();
+      }
+    }
+
+    function toggleReadonly(button) {
+      const input = document.getElementById(button.dataset.target);
+      if (!input) return;
+      const isReadonly = input.hasAttribute('readonly');
+      setReadonlyState(button, !isReadonly);
+    }
+
+    function resetEditableFields() {
+      toggleButtons.forEach(button => {
+        const input = document.getElementById(button.dataset.target);
+        if (!input) return;
+        input.value = input.defaultValue;
+        setReadonlyState(button, true);
+      });
+    }
 
     function loadRecords() {
       try {
@@ -289,19 +358,19 @@
       y += lineHeight;
       doc.text('Реквизиты исполнителя', 14, y);
       y += lineHeight;
-      doc.text(IP_DETAILS.name, 14, y);
+      doc.text(ipDetails.name, 14, y);
       y += lineHeight;
-      doc.text(IP_DETAILS.inn, 14, y);
+      doc.text(ipDetails.inn, 14, y);
       y += lineHeight;
-      doc.text(IP_DETAILS.ogrnip, 14, y);
+      doc.text(ipDetails.ogrnip, 14, y);
       y += lineHeight;
-      doc.text(IP_DETAILS.address, 14, y);
+      doc.text(ipDetails.address, 14, y);
       y += lineHeight;
-      doc.text(IP_DETAILS.bank, 14, y);
+      doc.text(ipDetails.bank, 14, y);
       y += lineHeight;
-      doc.text(IP_DETAILS.account, 14, y);
+      doc.text(ipDetails.account, 14, y);
       y += lineHeight;
-      doc.text(IP_DETAILS.bik, 14, y);
+      doc.text(ipDetails.bik, 14, y);
 
       return doc;
     }
@@ -335,6 +404,10 @@
       return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     }
 
+    toggleButtons.forEach(button => {
+      button.addEventListener('click', () => toggleReadonly(button));
+    });
+
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       const records = loadRecords();
@@ -359,6 +432,7 @@
       downloadPdf(record);
       form.reset();
       timeInput.value = '';
+      resetEditableFields();
     });
 
     registryBody.addEventListener('click', handleDownload);
@@ -366,6 +440,8 @@
     (function init() {
       const now = new Date();
       timeInput.placeholder = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      resetEditableFields();
+      loadVendorDetails();
       render();
     })();
   </script>
