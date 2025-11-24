@@ -261,12 +261,22 @@
     }
 
     function formatDate(date) {
-      return date.toISOString().slice(0, 10);
+      const d = date || new Date();
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}.${month}.${year}`;
     }
 
     function formatTime(date) {
       const d = date || new Date();
       return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+
+    function formatAmountDisplay(value) {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) return value;
+      return parsed.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
     }
 
     function todayNumberPrefix(date) {
@@ -301,7 +311,7 @@
           <td>${record.time}</td>
           <td>${record.client}</td>
           <td>${record.service}</td>
-          <td>${record.amount}</td>
+          <td>${formatAmountDisplay(record.amount)}</td>
           <td>${record.payment}</td>
           <td class="actions"><button data-number="${record.number}" class="download">Скачать PDF</button></td>
         `;
@@ -334,83 +344,75 @@
       ensureFont(doc);
 
       const left = 14;
-      const contentWidth = 180;
-      let y = 15;
+      const center = 105;
+      const contentWidth = 182;
+      const separator = '..............................................................................';
+      let y = 16;
+
+      const addSeparator = () => {
+        doc.text(separator, left, y);
+        y += 6;
+      };
+
+      const addSectionTitle = (title) => {
+        doc.text(title, left, y);
+        y += 7;
+        addSeparator();
+      };
+
+      const pushLines = (text) => {
+        if (!text) return;
+        const lines = doc.splitTextToSize(text, contentWidth);
+        doc.text(lines, left, y);
+        y += lines.length * 6;
+      };
+
+      const amountDisplay = `${formatAmountDisplay(record.amount)} р`;
 
       doc.setFontSize(14);
-      doc.text('КВИТАНЦИЯ ОБ ОПЛАТЕ УСЛУГ', left, y);
-      y += 8;
+      doc.text('КВИТАНЦИЯ ОБ ОПЛАТЕ УСЛУГ', center, y, { align: 'center' });
+      y += 10;
 
       doc.setFontSize(12);
-      doc.text(`Документ № ${record.number} от ${record.date} в ${record.time}`, left, y);
-      y += 10;
+      doc.text(`Документ № ${record.number} от ${record.date} за ${record.time}`, center, y, { align: 'center' });
+      y += 12;
 
-      doc.text('1. ПРОДАВЕЦ', left, y);
-      y += 7;
-      doc.text(ipDetails.name, left, y);
-      y += 6;
-      doc.text([ipDetails.inn, ipDetails.ogrnip].filter(Boolean).join('   '), left, y);
-      y += 6;
-      if (ipDetails.taxRegime) {
-        doc.text(`Налоговый режим: ${ipDetails.taxRegime}`, left, y);
-        y += 6;
-      }
-      if (ipDetails.activity) {
-        doc.text(`Вид деятельности: ${ipDetails.activity}`, left, y);
-        y += 6;
-      }
-      if (ipDetails.okved) {
-        doc.text(`Код ОКВЭД: ${ipDetails.okved}`, left, y);
-        y += 6;
-      }
-      doc.text(ipDetails.address, left, y);
-      y += 10;
+      addSectionTitle('1. ПРОДАВЕЦ');
+      pushLines(ipDetails.name);
+      pushLines([ipDetails.inn, ipDetails.ogrnip].filter(Boolean).join('   '));
+      if (ipDetails.taxRegime) pushLines(`Налоговый режим: ${ipDetails.taxRegime}`);
+      if (ipDetails.activity) pushLines(`Вид деятельности: ${ipDetails.activity}`);
+      if (ipDetails.okved) pushLines(`Код ОКВЭД: ${ipDetails.okved}`);
+      addSeparator();
+      pushLines(`Адрес: ${ipDetails.address}`);
+      y += 4;
 
-      doc.text(`2. ПОКУПАТЕЛЬ: ${record.client || 'Физическое лицо'}`, left, y);
-      y += 10;
+      addSectionTitle('2. ПОКУПАТЕЛЬ');
+      pushLines(record.client || 'Физическое лицо');
+      y += 4;
 
-      doc.text('3. ОСНОВАНИЕ ПЛАТЕЖА', left, y);
-      y += 7;
-      const paymentReason = doc.splitTextToSize(record.service, contentWidth);
-      doc.text(paymentReason, left, y);
-      y += paymentReason.length * 6 + 4;
+      addSectionTitle('3. ОСНОВАНИЕ ПЛАТЕЖА');
+      pushLines(record.service);
+      y += 4;
 
-      doc.text('4. СОСТАВ РАСЧЁТА', left, y);
-      y += 7;
-      const itemLines = doc.splitTextToSize(`${record.service} — ${record.amount} ₽`, contentWidth);
-      doc.text(itemLines, left, y);
-      y += itemLines.length * 6 + 4;
+      addSectionTitle('4. СОСТАВ РАСЧЁТА');
+      pushLines(`${record.service} ${amountDisplay}`);
+      addSeparator();
       doc.setFontSize(13);
-      doc.text(`ИТОГО К ОПЛАТЕ: ${record.amount} ₽`, left, y);
+      doc.text(`ИТОГО К ОПЛАТЕ: ${amountDisplay}`, left, y);
       y += 10;
       doc.setFontSize(12);
 
-      doc.text('5. ОПЛАТА', left, y);
-      y += 7;
-      const paymentText = doc.splitTextToSize(
-        `Оплата получена (налично/безналично/онлайн): ${record.payment}`,
-        contentWidth
-      );
-      doc.text(paymentText, left, y);
-      y += paymentText.length * 6 + 4;
-
+      addSectionTitle('5. ОПЛАТА');
+      pushLines(`Оплата: ${record.payment}`);
       if (record.comment) {
-        const commentLines = doc.splitTextToSize(`Комментарий: ${record.comment}`, contentWidth);
-        doc.text(commentLines, left, y);
-        y += commentLines.length * 6 + 4;
+        y += 2;
+        pushLines(`Комментарий: ${record.comment}`);
       }
+      y += 4;
 
-      doc.text('6. ПОДТВЕРЖДЕНИЕ ОПЛАТЫ', left, y);
-      y += 7;
-      doc.text(`Дата получения: ${record.date} в ${record.time}`, left, y);
-      y += 6;
-
-      const bankInfo = [ipDetails.bank, ipDetails.account, ipDetails.bik].filter(Boolean);
-      if (bankInfo.length) {
-        const bankLines = doc.splitTextToSize(bankInfo.join('   '), contentWidth);
-        doc.text(bankLines, left, y);
-        y += bankLines.length * 6;
-      }
+      addSectionTitle('6. ПОДТВЕРЖДЕНИЕ ОПЛАТЫ');
+      pushLines(`Дата получения: ${record.date} за ${record.time}`);
 
       return doc;
     }
@@ -445,13 +447,20 @@
       const now = new Date();
       const date = formatDate(now);
       const time = formatTime(now);
+      const amountValue = Number(document.getElementById('amount').value);
+
+      if (!Number.isFinite(amountValue)) {
+        alert('Введите корректную сумму.');
+        return;
+      }
+
       const record = {
         number: nextNumber(records, now),
         date,
         time,
         client: document.getElementById('client').value.trim() || 'Физлицо',
         service: document.getElementById('service').value.trim(),
-        amount: Number(document.getElementById('amount').value).toFixed(2),
+        amount: amountValue,
         payment: document.getElementById('payment').value,
         comment: document.getElementById('comment').value.trim(),
         createdAt: Date.now()
