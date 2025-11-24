@@ -123,7 +123,7 @@
 
   <section class="section" aria-labelledby="create-title">
     <h2 id="create-title">Создать БСО</h2>
-    <div class="notice" id="current-number">Номер будет сгенерирован автоматически по формуле YYYYMMDD-XXX.</div>
+    <div class="notice" id="current-number">Номер генерируется автоматически по формуле YYYYMMDD-XXX, время проставляется текущее в момент создания PDF.</div>
     <form id="bso-form">
       <div class="field-row">
         <label>
@@ -142,10 +142,6 @@
       <label>
         Сумма, ₽
         <input type="number" id="amount" name="amount" min="0" step="0.01" required />
-      </label>
-      <label>
-        Время оплаты
-        <input type="time" id="time" name="time" required />
       </label>
       <div class="field-row">
         <label>
@@ -199,6 +195,9 @@
       inn: 'ИНН 123456789012',
       ogrnip: 'ОГРНИП 123456789012345',
       address: 'г. Москва, ул. Пример, д. 1',
+      taxRegime: 'Патентная система налогообложения (ПСН)',
+      activity: 'Услуги репетиторства по информатике (онлайн)',
+      okved: 'ОКВЭД 85.41',
       bank: 'Тинькофф Банк',
       account: 'Р/с 40802810900000000001',
       bik: 'БИК 044525974'
@@ -207,7 +206,6 @@
     const form = document.getElementById('bso-form');
     const registryBody = document.querySelector('#registry tbody');
     const currentNumberEl = document.getElementById('current-number');
-    const timeInput = document.getElementById('time');
     const toggleButtons = document.querySelectorAll('.toggle-edit');
 
     async function loadVendorDetails() {
@@ -264,6 +262,11 @@
 
     function formatDate(date) {
       return date.toISOString().slice(0, 10);
+    }
+
+    function formatTime(date) {
+      const d = date || new Date();
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     }
 
     function todayNumberPrefix(date) {
@@ -329,48 +332,85 @@
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       ensureFont(doc);
-      const lineHeight = 8;
+
+      const left = 14;
+      const contentWidth = 180;
       let y = 15;
+
       doc.setFontSize(14);
-      doc.text('Бланк строгой отчетности', 14, y);
-      y += lineHeight;
+      doc.text('КВИТАНЦИЯ ОБ ОПЛАТЕ УСЛУГ', left, y);
+      y += 8;
+
       doc.setFontSize(12);
-      doc.text(`Номер: ${record.number}`, 14, y);
-      y += lineHeight;
-      doc.text(`Дата: ${record.date}`, 14, y);
-      y += lineHeight;
-      doc.text(`Время: ${record.time}`, 14, y);
-      y += lineHeight;
-      doc.text(`Клиент: ${record.client || 'Физлицо'}`, 14, y);
-      y += lineHeight;
-      doc.text(`Услуга: ${record.service}`, 14, y);
-      y += lineHeight;
-      doc.text(`Сумма: ${record.amount} ₽`, 14, y);
-      y += lineHeight;
-      doc.text(`Способ оплаты: ${record.payment}`, 14, y);
-      y += lineHeight;
+      doc.text(`Документ № ${record.number} от ${record.date} в ${record.time}`, left, y);
+      y += 10;
+
+      doc.text('1. ПРОДАВЕЦ', left, y);
+      y += 7;
+      doc.text(ipDetails.name, left, y);
+      y += 6;
+      doc.text([ipDetails.inn, ipDetails.ogrnip].filter(Boolean).join('   '), left, y);
+      y += 6;
+      if (ipDetails.taxRegime) {
+        doc.text(`Налоговый режим: ${ipDetails.taxRegime}`, left, y);
+        y += 6;
+      }
+      if (ipDetails.activity) {
+        doc.text(`Вид деятельности: ${ipDetails.activity}`, left, y);
+        y += 6;
+      }
+      if (ipDetails.okved) {
+        doc.text(`Код ОКВЭД: ${ipDetails.okved}`, left, y);
+        y += 6;
+      }
+      doc.text(ipDetails.address, left, y);
+      y += 10;
+
+      doc.text(`2. ПОКУПАТЕЛЬ: ${record.client || 'Физическое лицо'}`, left, y);
+      y += 10;
+
+      doc.text('3. ОСНОВАНИЕ ПЛАТЕЖА', left, y);
+      y += 7;
+      const paymentReason = doc.splitTextToSize(record.service, contentWidth);
+      doc.text(paymentReason, left, y);
+      y += paymentReason.length * 6 + 4;
+
+      doc.text('4. СОСТАВ РАСЧЁТА', left, y);
+      y += 7;
+      const itemLines = doc.splitTextToSize(`${record.service} — ${record.amount} ₽`, contentWidth);
+      doc.text(itemLines, left, y);
+      y += itemLines.length * 6 + 4;
+      doc.setFontSize(13);
+      doc.text(`ИТОГО К ОПЛАТЕ: ${record.amount} ₽`, left, y);
+      y += 10;
+      doc.setFontSize(12);
+
+      doc.text('5. ОПЛАТА', left, y);
+      y += 7;
+      const paymentText = doc.splitTextToSize(
+        `Оплата получена (налично/безналично/онлайн): ${record.payment}`,
+        contentWidth
+      );
+      doc.text(paymentText, left, y);
+      y += paymentText.length * 6 + 4;
+
       if (record.comment) {
-        const lines = doc.splitTextToSize(`Комментарий: ${record.comment}`, 180);
-        doc.text(lines, 14, y);
-        y += lines.length * 7;
+        const commentLines = doc.splitTextToSize(`Комментарий: ${record.comment}`, contentWidth);
+        doc.text(commentLines, left, y);
+        y += commentLines.length * 6 + 4;
       }
 
-      y += lineHeight;
-      doc.text('Реквизиты исполнителя', 14, y);
-      y += lineHeight;
-      doc.text(ipDetails.name, 14, y);
-      y += lineHeight;
-      doc.text(ipDetails.inn, 14, y);
-      y += lineHeight;
-      doc.text(ipDetails.ogrnip, 14, y);
-      y += lineHeight;
-      doc.text(ipDetails.address, 14, y);
-      y += lineHeight;
-      doc.text(ipDetails.bank, 14, y);
-      y += lineHeight;
-      doc.text(ipDetails.account, 14, y);
-      y += lineHeight;
-      doc.text(ipDetails.bik, 14, y);
+      doc.text('6. ПОДТВЕРЖДЕНИЕ ОПЛАТЫ', left, y);
+      y += 7;
+      doc.text(`Дата получения: ${record.date} в ${record.time}`, left, y);
+      y += 6;
+
+      const bankInfo = [ipDetails.bank, ipDetails.account, ipDetails.bik].filter(Boolean);
+      if (bankInfo.length) {
+        const bankLines = doc.splitTextToSize(bankInfo.join('   '), contentWidth);
+        doc.text(bankLines, left, y);
+        y += bankLines.length * 6;
+      }
 
       return doc;
     }
@@ -395,15 +435,6 @@
       }
     }
 
-    function getTimeValue() {
-      const value = timeInput.value;
-      if (/^\d{2}:\d{2}$/.test(value)) {
-        return value;
-      }
-      const now = new Date();
-      return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    }
-
     toggleButtons.forEach(button => {
       button.addEventListener('click', () => toggleReadonly(button));
     });
@@ -413,7 +444,7 @@
       const records = loadRecords();
       const now = new Date();
       const date = formatDate(now);
-      const time = getTimeValue();
+      const time = formatTime(now);
       const record = {
         number: nextNumber(records, now),
         date,
@@ -431,15 +462,12 @@
       render();
       downloadPdf(record);
       form.reset();
-      timeInput.value = '';
       resetEditableFields();
     });
 
     registryBody.addEventListener('click', handleDownload);
 
     (function init() {
-      const now = new Date();
-      timeInput.placeholder = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       resetEditableFields();
       loadVendorDetails();
       render();
