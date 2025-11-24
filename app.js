@@ -1,4 +1,12 @@
 (function () {
+  function showFatalError(message) {
+    const fallback = document.getElementById('app-error');
+    if (fallback) {
+      fallback.textContent = message;
+      fallback.classList.remove('hidden');
+    }
+  }
+
   function initApp() {
     const pdfService = window.PdfService || {};
     const safeFormatAmountDisplay = pdfService.formatAmountDisplay || ((value) => value);
@@ -40,7 +48,9 @@
     const importRegistryInput = document.getElementById('registry-import-file');
 
     if (!form || !registryBody || !currentNumberEl || !creationSuccess) {
-      console.error('Отсутствует обязательная разметка страницы, инициализация прервана.');
+      const message = 'Страница загружена некорректно: отсутствуют обязательные элементы формы.';
+      console.error(message);
+      showFatalError(message);
       return;
     }
 
@@ -477,8 +487,8 @@
         createdAt: Date.now()
       };
   
-      records.push(record);
-      saveRecords(records);
+        records.push(record);
+        saveRecords(records);
   
       const prefix = todayNumberPrefix(now);
       const overrides = loadSequenceOverrides();
@@ -545,9 +555,18 @@
       })();
   }
 
+  function start() {
+    try {
+      initApp();
+    } catch (error) {
+      console.error('Неожиданная ошибка инициализации', error);
+      showFatalError('Не удалось запустить генератор. Попробуйте обновить страницу или открыть её в другом браузере.');
+    }
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
+    document.addEventListener('DOMContentLoaded', start);
   } else {
-    initApp();
+    start();
   }
 })();
