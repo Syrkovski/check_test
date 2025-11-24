@@ -188,6 +188,60 @@
       line-height: 1.5;
     }
 
+    .section-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .section-heading {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .section-description {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .section-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .number-display {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+
+    .number-value {
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+      color: var(--text);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.08);
+      color: var(--accent-strong);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
     .hidden {
       display: none;
     }
@@ -279,9 +333,15 @@
     </section>
 
     <section class="section" aria-labelledby="vendor-title">
-      <h2 id="vendor-title">Данные ИП</h2>
-      <p class="notice">Реквизиты подставляются в PDF и сохраняются локально. Можно отредактировать их прямо здесь, без правки vendor.json.</p>
-      <button type="button" id="toggle-vendor-form">Редактировать реквизиты</button>
+      <div class="section-header">
+        <div class="section-heading">
+          <h2 id="vendor-title">Данные ИП</h2>
+          <p class="section-description">Реквизиты подставляются в PDF и сохраняются локально. Можно отредактировать их прямо здесь, без правки vendor.json.</p>
+        </div>
+        <div class="section-actions">
+          <button type="button" id="toggle-vendor-form">Редактировать реквизиты</button>
+        </div>
+      </div>
       <form id="vendor-form" class="hidden">
         <div class="inline-fields">
           <label>
@@ -333,12 +393,14 @@
     </section>
 
     <section class="section" aria-labelledby="registry-title">
-      <h2 id="registry-title">Реестр БСО</h2>
-      <div class="actions" style="margin-bottom: 12px; flex-wrap: wrap;">
-        <button type="button" id="export-registry">Выгрузить реестр в JSON</button>
-        <button type="button" id="import-registry">Загрузить реестр из файла</button>
-        <input type="file" id="registry-import-file" accept="application/json" class="hidden" />
+      <div class="section-header">
+        <h2 id="registry-title">Реестр БСО</h2>
+        <div class="section-actions">
+          <button type="button" id="export-registry">Выгрузить реестр в JSON</button>
+          <button type="button" id="import-registry">Загрузить реестр из файла</button>
+        </div>
       </div>
+      <input type="file" id="registry-import-file" accept="application/json" class="hidden" />
       <table id="registry">
         <thead>
           <tr>
@@ -614,28 +676,33 @@
       return `${prefix}-${String(seq).padStart(3, '0')}`;
     }
 
-    function renderCurrentNumber() {
-      const records = loadRecords();
-      const today = new Date();
-      const prefix = todayNumberPrefix(today);
-      const overrides = loadSequenceOverrides();
-      const overrideSeq = overrides[prefix];
-      const number = nextNumber(records, today);
-      currentNumberEl.textContent = Number.isFinite(overrideSeq) && overrideSeq > 0
-        ? `Следующий номер (ручной): ${number}`
-        : `Следующий номер: ${number}`;
+      function renderCurrentNumber() {
+        const records = loadRecords();
+        const today = new Date();
+        const prefix = todayNumberPrefix(today);
+        const overrides = loadSequenceOverrides();
+        const overrideSeq = overrides[prefix];
+        const number = nextNumber(records, today);
+        const isManual = Number.isFinite(overrideSeq) && overrideSeq > 0;
+        currentNumberEl.innerHTML = `
+          <span class="number-display">
+            <span>Следующий номер:</span>
+            <span class="number-value">${number}</span>
+            ${isManual ? '<span class="pill">ручной</span>' : ''}
+          </span>
+        `;
 
-      if (numberPrefixInput) {
-        numberPrefixInput.value = `${prefix}-`;
-      }
+        if (numberPrefixInput) {
+          numberPrefixInput.value = `${prefix}-`;
+        }
 
-      if (numberSequenceInput) {
-        const suggested = Number.isFinite(overrideSeq) && overrideSeq > 0
-          ? overrideSeq
-          : maxSequenceForPrefix(records, prefix) + 1;
-        numberSequenceInput.value = suggested;
+        if (numberSequenceInput) {
+          const suggested = Number.isFinite(overrideSeq) && overrideSeq > 0
+            ? overrideSeq
+            : maxSequenceForPrefix(records, prefix) + 1;
+          numberSequenceInput.value = suggested;
+        }
       }
-    }
 
     function renderRegistry() {
       const records = loadRecords().sort((a, b) => b.createdAt - a.createdAt);
