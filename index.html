@@ -365,10 +365,15 @@
         y += 6;
       };
 
-      const addSectionTitle = (title) => {
+      const addSection = (title, body) => {
+        addSeparator();
         doc.text(title, left, y);
         y += 7;
+        if (typeof body === 'function') {
+          body();
+        }
         addSeparator();
+        y += 4;
       };
 
       const pushLines = (text) => {
@@ -388,6 +393,7 @@
         : Number((unitPrice * quantity).toFixed(2));
       const amountDisplay = `${formatAmountDisplay(totalAmount)} р`;
 
+      addStrongSeparator();
       doc.setFontSize(14);
       doc.text('КВИТАНЦИЯ ОБ ОПЛАТЕ УСЛУГ', center, y, { align: 'center' });
       y += 10;
@@ -395,42 +401,47 @@
       doc.setFontSize(12);
       doc.text(`Документ № ${record.number} от ${record.date} за ${record.time}`, center, y, { align: 'center' });
       y += 12;
+      addStrongSeparator();
 
-      addSectionTitle('1. ПРОДАВЕЦ');
-      pushLines(ipDetails.name);
-      pushLines([ipDetails.inn, ipDetails.ogrnip].filter(Boolean).join('   '));
-      if (ipDetails.taxRegime) pushLines(`Налоговый режим: ${ipDetails.taxRegime}`);
-      if (ipDetails.activity) pushLines(`Вид деятельности: ${ipDetails.activity}`);
-      if (ipDetails.okved) pushLines(`Код ОКВЭД: ${ipDetails.okved}`);
-      addSeparator();
-      pushLines(`Место деятельности: ${ipDetails.location || 'Онлайн'}`);
-      y += 4;
+      addSection('1. ПРОДАВЕЦ', () => {
+        pushLines(ipDetails.name);
+        pushLines([ipDetails.inn, ipDetails.ogrnip].filter(Boolean).join('   '));
+        if (ipDetails.taxRegime) pushLines(`Налоговый режим: ${ipDetails.taxRegime}`);
+        if (ipDetails.activity) pushLines(`Вид деятельности: ${ipDetails.activity}`);
+        if (ipDetails.okved) pushLines(`Код ОКВЭД: ${ipDetails.okved}`);
+        pushLines(`Место деятельности: ${ipDetails.location || 'Онлайн'}`);
+      });
 
-      addSectionTitle('2. ПОКУПАТЕЛЬ');
-      pushLines(record.client || 'Физическое лицо');
-      y += 4;
+      addSection('2. ПОКУПАТЕЛЬ', () => {
+        pushLines(record.client || 'Физическое лицо');
+      });
 
-      addSectionTitle('3. ОСНОВАНИЕ ПЛАТЕЖА');
-      pushLines(record.service);
-      y += 4;
+      addSection('3. ОСНОВАНИЕ ПЛАТЕЖА', () => {
+        pushLines(record.service);
+      });
 
-      addSectionTitle('4. СОСТАВ РАСЧЁТА');
-      pushLines(record.service);
-      pushLines(`Цена 1 занятия: ${unitPriceDisplay}`);
-      pushLines(`Количество занятий: ${quantity}`);
-      pushLines(`Сумма: ${amountDisplay}`);
+      addSection('4. СОСТАВ РАСЧЁТА', () => {
+        pushLines(record.service);
+        pushLines(`Цена 1 занятия: ${unitPriceDisplay}`);
+        pushLines(`Количество занятий: ${quantity}`);
+        pushLines(`Сумма: ${amountDisplay}`);
+      });
+
       addStrongSeparator();
       doc.setFontSize(13);
       doc.text(`ИТОГО К ОПЛАТЕ: ${amountDisplay}`, left, y);
       y += 10;
       doc.setFontSize(12);
 
-      addSectionTitle('5. ОПЛАТА');
-      pushLines(`Оплата: ${record.payment}`);
-      y += 4;
+      addSection('5. ОПЛАТА', () => {
+        pushLines(`Оплата: ${record.payment}`);
+      });
 
-      addSectionTitle('6. ПОДТВЕРЖДЕНИЕ ОПЛАТЫ');
-      pushLines(`Дата получения: ${record.date} за ${record.time}`);
+      addSection('6. ПОДТВЕРЖДЕНИЕ ОПЛАТЫ', () => {
+        pushLines(`Дата получения: ${record.date} за ${record.time}`);
+      });
+
+      addStrongSeparator();
 
       return doc;
     }
