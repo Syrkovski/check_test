@@ -140,8 +140,12 @@
         <button type="button" class="toggle-edit" data-target="service">Изменить</button>
       </div>
       <label>
-        Сумма, ₽
-        <input type="number" id="amount" name="amount" min="0" step="0.01" required />
+        Количество занятий
+        <input type="number" id="quantity" name="quantity" min="1" step="1" value="1" required />
+      </label>
+      <label>
+        Цена за 1 занятие, ₽
+        <input type="number" id="unitPrice" name="unitPrice" min="0" step="0.01" required />
       </label>
       <div class="field-row">
         <label>
@@ -157,10 +161,6 @@
         </label>
         <button type="button" class="toggle-edit" data-target="payment">Изменить</button>
       </div>
-      <label>
-        Комментарий (необязательно)
-        <textarea id="comment" name="comment"></textarea>
-      </label>
       <button type="submit">Создать PDF</button>
     </form>
   </section>
@@ -194,10 +194,10 @@
       name: 'ИП Иванов Иван Иванович',
       inn: 'ИНН 123456789012',
       ogrnip: 'ОГРНИП 123456789012345',
-      address: 'г. Москва, ул. Пример, д. 1',
+      location: 'Онлайн',
       taxRegime: 'Патентная система налогообложения (ПСН)',
       activity: 'Услуги репетиторства по информатике (онлайн)',
-      okved: 'ОКВЭД 85.41',
+      okved: '85.41',
       bank: 'Тинькофф Банк',
       account: 'Р/с 40802810900000000001',
       bik: 'БИК 044525974'
@@ -304,6 +304,11 @@
       const records = loadRecords().sort((a, b) => b.createdAt - a.createdAt);
       registryBody.innerHTML = '';
       records.forEach(record => {
+        const quantity = Number(record.quantity) || 1;
+        const unitPrice = Number(record.unitPrice);
+        const amountValue = Number.isFinite(Number(record.amount))
+          ? Number(record.amount)
+          : Number((unitPrice * quantity).toFixed(2));
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${record.number}</td>
@@ -311,7 +316,7 @@
           <td>${record.time}</td>
           <td>${record.client}</td>
           <td>${record.service}</td>
-          <td>${formatAmountDisplay(record.amount)}</td>
+          <td>${formatAmountDisplay(amountValue)}</td>
           <td>${record.payment}</td>
           <td class="actions"><button data-number="${record.number}" class="download">Скачать PDF</button></td>
         `;
@@ -346,11 +351,17 @@
       const left = 14;
       const center = 105;
       const contentWidth = 182;
-      const separator = '..............................................................................';
+      const dashSeparator = '--------------------------------------------------------------------------';
+      const strongSeparator = '==========================================================================';
       let y = 16;
 
       const addSeparator = () => {
-        doc.text(separator, left, y);
+        doc.text(dashSeparator, left, y);
+        y += 6;
+      };
+
+      const addStrongSeparator = () => {
+        doc.text(strongSeparator, left, y);
         y += 6;
       };
 
@@ -367,7 +378,15 @@
         y += lines.length * 6;
       };
 
-      const amountDisplay = `${formatAmountDisplay(record.amount)} р`;
+      const quantity = Number(record.quantity) || 1;
+      const unitPrice = Number(record.unitPrice);
+      const unitPriceDisplay = Number.isFinite(unitPrice)
+        ? `${formatAmountDisplay(unitPrice)} р`
+        : '—';
+      const totalAmount = Number.isFinite(Number(record.amount))
+        ? Number(record.amount)
+        : Number((unitPrice * quantity).toFixed(2));
+      const amountDisplay = `${formatAmountDisplay(totalAmount)} р`;
 
       doc.setFontSize(14);
       doc.text('КВИТАНЦИЯ ОБ ОПЛАТЕ УСЛУГ', center, y, { align: 'center' });
@@ -384,7 +403,7 @@
       if (ipDetails.activity) pushLines(`Вид деятельности: ${ipDetails.activity}`);
       if (ipDetails.okved) pushLines(`Код ОКВЭД: ${ipDetails.okved}`);
       addSeparator();
-      pushLines(`Адрес: ${ipDetails.address}`);
+      pushLines(`Место деятельности: ${ipDetails.location || 'Онлайн'}`);
       y += 4;
 
       addSectionTitle('2. ПОКУПАТЕЛЬ');
@@ -396,8 +415,11 @@
       y += 4;
 
       addSectionTitle('4. СОСТАВ РАСЧЁТА');
-      pushLines(`${record.service} ${amountDisplay}`);
-      addSeparator();
+      pushLines(record.service);
+      pushLines(`Цена 1 занятия: ${unitPriceDisplay}`);
+      pushLines(`Количество занятий: ${quantity}`);
+      pushLines(`Сумма: ${amountDisplay}`);
+      addStrongSeparator();
       doc.setFontSize(13);
       doc.text(`ИТОГО К ОПЛАТЕ: ${amountDisplay}`, left, y);
       y += 10;
@@ -405,10 +427,6 @@
 
       addSectionTitle('5. ОПЛАТА');
       pushLines(`Оплата: ${record.payment}`);
-      if (record.comment) {
-        y += 2;
-        pushLines(`Комментарий: ${record.comment}`);
-      }
       y += 4;
 
       addSectionTitle('6. ПОДТВЕРЖДЕНИЕ ОПЛАТЫ');
@@ -447,12 +465,20 @@
       const now = new Date();
       const date = formatDate(now);
       const time = formatTime(now);
-      const amountValue = Number(document.getElementById('amount').value);
+      const quantityValue = Number(document.getElementById('quantity').value);
+      const unitPriceValue = Number(document.getElementById('unitPrice').value);
 
-      if (!Number.isFinite(amountValue)) {
-        alert('Введите корректную сумму.');
+      if (!Number.isFinite(quantityValue) || quantityValue <= 0) {
+        alert('Введите корректное количество занятий.');
         return;
       }
+
+      if (!Number.isFinite(unitPriceValue) || unitPriceValue < 0) {
+        alert('Введите корректную цену за занятие.');
+        return;
+      }
+
+      const amountValue = Number((unitPriceValue * quantityValue).toFixed(2));
 
       const record = {
         number: nextNumber(records, now),
@@ -460,9 +486,10 @@
         time,
         client: document.getElementById('client').value.trim() || 'Физлицо',
         service: document.getElementById('service').value.trim(),
+        quantity: quantityValue,
+        unitPrice: unitPriceValue,
         amount: amountValue,
         payment: document.getElementById('payment').value,
-        comment: document.getElementById('comment').value.trim(),
         createdAt: Date.now()
       };
 
