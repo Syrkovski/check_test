@@ -545,9 +545,44 @@
       toggleVendorFormBtn.setAttribute('aria-expanded', 'true');
     }
 
+    function parseQuantity(value) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    }
+
+    function parseUnitPrice(value) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+    }
+
+    function calculateAmount(quantity, unitPrice) {
+      return Number(((quantity || 0) * (unitPrice || 0)).toFixed(2));
+    }
+
+    function sanitizeRecord(raw) {
+      if (!raw || typeof raw !== 'object' || !raw.number || !raw.date || !raw.time) {
+        return null;
+      }
+
+      const quantity = parseQuantity(raw.quantity);
+      const unitPrice = parseUnitPrice(raw.unitPrice);
+
+      if (quantity === null || unitPrice === null) {
+        return null;
+      }
+
+      return {
+        ...raw,
+        quantity,
+        unitPrice,
+        amount: calculateAmount(quantity, unitPrice)
+      };
+    }
+
     function loadRecords() {
       try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        return parsed.map(sanitizeRecord).filter(Boolean);
       } catch (e) {
         return [];
       }
@@ -579,7 +614,10 @@
             return;
           }
 
-          const sanitized = data.filter(item => item && typeof item === 'object' && item.number && item.date && item.time);
+          const sanitized = data
+            .map(sanitizeRecord)
+            .filter(Boolean);
+
           if (!sanitized.length) {
             alert('Не удалось найти валидные записи в файле.');
             return;
@@ -948,20 +986,20 @@
       const now = new Date();
       const date = formatDate(now);
       const time = formatTime(now);
-      const quantityValue = Number(document.getElementById('quantity').value);
-      const unitPriceValue = Number(document.getElementById('unitPrice').value);
+      const quantityValue = parseQuantity(document.getElementById('quantity').value);
+      const unitPriceValue = parseUnitPrice(document.getElementById('unitPrice').value);
 
-      if (!Number.isFinite(quantityValue) || quantityValue <= 0) {
+      if (quantityValue === null) {
         alert('Введите корректное количество занятий.');
         return;
       }
 
-      if (!Number.isFinite(unitPriceValue) || unitPriceValue < 0) {
+      if (unitPriceValue === null) {
         alert('Введите корректную цену за занятие.');
         return;
       }
 
-      const amountValue = Number((unitPriceValue * quantityValue).toFixed(2));
+      const amountValue = calculateAmount(quantityValue, unitPriceValue);
 
       const record = {
         number: nextNumber(records, now),
