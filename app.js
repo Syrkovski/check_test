@@ -1,5 +1,5 @@
 (function () {
-  document.addEventListener('DOMContentLoaded', () => {
+  function initApp() {
     const pdfService = window.PdfService || {};
     const safeFormatAmountDisplay = pdfService.formatAmountDisplay || ((value) => value);
     const downloadPdf = pdfService.downloadPdf;
@@ -543,5 +543,11 @@
         loadVendorDetails();
         render();
       })();
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+  } else {
+    initApp();
+  }
 })();
