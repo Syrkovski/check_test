@@ -188,6 +188,13 @@
       line-height: 1.5;
     }
 
+    .notice.success {
+      background: #ecfdf3;
+      border-color: #bbf7d0;
+      color: #15803d;
+      font-weight: 600;
+    }
+
     .section-header {
       display: flex;
       align-items: flex-start;
@@ -270,8 +277,12 @@
     </header>
 
     <section class="section" aria-labelledby="create-title">
-      <h2 id="create-title">Создать БСО</h2>
+      <div class="section-heading">
+        <h2 id="create-title">Создать БСО</h2>
+        <p class="section-description">Дата и время подставятся автоматически, вы меняете только количество и цену.</p>
+      </div>
       <div class="notice" id="current-number">Номер генерируется автоматически по формуле YYYYMMDD-XXX, время проставляется текущее в момент создания PDF.</div>
+      <div class="notice success hidden" id="creation-success" role="status" aria-live="polite"></div>
       <form id="bso-form">
         <div class="field-row">
           <label>
@@ -400,6 +411,7 @@
           <button type="button" id="import-registry">Загрузить реестр из файла</button>
         </div>
       </div>
+      <p class="section-description">Хранится только в этом браузере. При очистке данных реестр исчезнет.</p>
       <input type="file" id="registry-import-file" accept="application/json" class="hidden" />
       <table id="registry">
         <thead>
@@ -440,9 +452,12 @@
       bik: 'БИК 044525974'
     };
 
+    let successTimeout;
+
     const form = document.getElementById('bso-form');
     const registryBody = document.querySelector('#registry tbody');
     const currentNumberEl = document.getElementById('current-number');
+    const creationSuccess = document.getElementById('creation-success');
     const toggleButtons = document.querySelectorAll('.toggle-edit');
     const numberingForm = document.getElementById('numbering-form');
     const numberPrefixInput = document.getElementById('number-prefix');
@@ -774,6 +789,16 @@
       renderRegistry();
     }
 
+    function showCreationSuccess(number) {
+      if (!creationSuccess) return;
+      creationSuccess.textContent = `БСО №${number} создан, PDF скачан.`;
+      creationSuccess.classList.remove('hidden');
+      if (successTimeout) {
+        clearTimeout(successTimeout);
+      }
+      successTimeout = setTimeout(() => creationSuccess.classList.add('hidden'), 5000);
+    }
+
     function ensureFont(doc) {
       if (!fontRegistered) {
         doc.addFileToVFS('DejaVuSans.ttf', DEJAVU_SANS_FONT);
@@ -1028,6 +1053,7 @@
 
       render();
       downloadPdf(record);
+      showCreationSuccess(record.number);
       form.reset();
       resetEditableFields();
     });
