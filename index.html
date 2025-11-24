@@ -113,6 +113,25 @@
       margin-bottom: 16px;
       background: #f8f8f8;
     }
+
+    .hidden {
+      display: none;
+    }
+
+    .inline-fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .inline-fields label {
+      margin: 0;
+    }
+
+    .section .actions {
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -165,8 +184,86 @@
     </form>
   </section>
 
+  <section class="section" aria-labelledby="numbering-title">
+    <h2 id="numbering-title">Управление нумерацией</h2>
+    <form id="numbering-form" class="inline-fields" aria-describedby="numbering-hint">
+      <label>
+        Префикс (сегодня)
+        <input type="text" id="number-prefix" readonly />
+      </label>
+      <label>
+        Суффикс следующего номера
+        <input type="number" id="number-sequence" name="number-sequence" min="1" max="999" required />
+      </label>
+      <div class="actions">
+        <button type="submit">Применить вручную</button>
+        <button type="button" id="reset-numbering">Сбросить на авто</button>
+      </div>
+    </form>
+    <p id="numbering-hint" class="notice">При необходимости укажите суффикс следующего номера (только цифры, 1–999). После ручного задания нумерация продолжится последовательно.</p>
+  </section>
+
+  <section class="section" aria-labelledby="vendor-title">
+    <h2 id="vendor-title">Данные ИП</h2>
+    <p class="notice">Реквизиты подставляются в PDF и сохраняются локально. Можно отредактировать их прямо здесь, без правки vendor.json.</p>
+    <button type="button" id="toggle-vendor-form">Редактировать реквизиты</button>
+    <form id="vendor-form" class="hidden">
+      <div class="inline-fields">
+        <label>
+          Наименование
+          <textarea id="vendor-name" required></textarea>
+        </label>
+        <label>
+          ИНН
+          <input type="text" id="vendor-inn" />
+        </label>
+        <label>
+          ОГРНИП
+          <input type="text" id="vendor-ogrnip" />
+        </label>
+        <label>
+          Налоговый режим
+          <input type="text" id="vendor-tax" />
+        </label>
+        <label>
+          Вид деятельности
+          <input type="text" id="vendor-activity" />
+        </label>
+        <label>
+          ОКВЭД
+          <input type="text" id="vendor-okved" />
+        </label>
+        <label>
+          Место деятельности
+          <input type="text" id="vendor-location" />
+        </label>
+        <label>
+          Банк
+          <input type="text" id="vendor-bank" />
+        </label>
+        <label>
+          Р/с
+          <input type="text" id="vendor-account" />
+        </label>
+        <label>
+          БИК
+          <input type="text" id="vendor-bik" />
+        </label>
+      </div>
+      <div class="actions">
+        <button type="submit">Сохранить реквизиты</button>
+        <button type="button" id="cancel-vendor">Отмена</button>
+      </div>
+    </form>
+  </section>
+
   <section class="section" aria-labelledby="registry-title">
     <h2 id="registry-title">Реестр БСО</h2>
+    <div class="actions" style="margin-bottom: 12px; flex-wrap: wrap;">
+      <button type="button" id="export-registry">Выгрузить реестр в JSON</button>
+      <button type="button" id="import-registry">Загрузить реестр из файла</button>
+      <input type="file" id="registry-import-file" accept="application/json" class="hidden" />
+    </div>
     <table id="registry">
       <thead>
         <tr>
@@ -190,6 +287,8 @@
     let fontRegistered = false;
 
     const STORAGE_KEY = 'bso-records';
+    const VENDOR_STORAGE_KEY = 'bso-vendor-details';
+    const NUMBER_OVERRIDE_KEY = 'bso-number-override';
     let ipDetails = {
       name: 'ИП Иванов Иван Иванович',
       inn: 'ИНН 123456789012',
@@ -207,16 +306,36 @@
     const registryBody = document.querySelector('#registry tbody');
     const currentNumberEl = document.getElementById('current-number');
     const toggleButtons = document.querySelectorAll('.toggle-edit');
+    const numberingForm = document.getElementById('numbering-form');
+    const numberPrefixInput = document.getElementById('number-prefix');
+    const numberSequenceInput = document.getElementById('number-sequence');
+    const resetNumberingBtn = document.getElementById('reset-numbering');
+    const vendorForm = document.getElementById('vendor-form');
+    const toggleVendorFormBtn = document.getElementById('toggle-vendor-form');
+    const cancelVendorBtn = document.getElementById('cancel-vendor');
+    const exportRegistryBtn = document.getElementById('export-registry');
+    const importRegistryBtn = document.getElementById('import-registry');
+    const importRegistryInput = document.getElementById('registry-import-file');
 
     async function loadVendorDetails() {
+      const stored = loadStoredVendorDetails();
+      if (stored) {
+        ipDetails = { ...ipDetails, ...stored };
+      }
+
       try {
         const response = await fetch('vendor.json');
         if (!response.ok) throw new Error(`Unexpected status ${response.status}`);
         const data = await response.json();
         ipDetails = { ...ipDetails, ...data };
+        if (stored) {
+          ipDetails = { ...ipDetails, ...stored };
+        }
       } catch (error) {
         console.warn('Не удалось загрузить данные продавца из vendor.json', error);
       }
+
+      fillVendorFormFromDetails();
     }
 
     function setReadonlyState(button, isReadonly) {
@@ -248,6 +367,46 @@
       });
     }
 
+    function fillVendorFormFromDetails() {
+      if (!vendorForm) return;
+
+      const fields = {
+        'vendor-name': ipDetails.name,
+        'vendor-inn': ipDetails.inn || '',
+        'vendor-ogrnip': ipDetails.ogrnip || '',
+        'vendor-tax': ipDetails.taxRegime || '',
+        'vendor-activity': ipDetails.activity || '',
+        'vendor-okved': ipDetails.okved || '',
+        'vendor-location': ipDetails.location || '',
+        'vendor-bank': ipDetails.bank || '',
+        'vendor-account': ipDetails.account || '',
+        'vendor-bik': ipDetails.bik || ''
+      };
+
+      Object.entries(fields).forEach(([id, value]) => {
+        const node = document.getElementById(id);
+        if (node) {
+          node.value = value || '';
+        }
+      });
+    }
+
+    function hideVendorForm() {
+      if (!vendorForm || !toggleVendorFormBtn) return;
+      vendorForm.classList.add('hidden');
+      toggleVendorFormBtn.textContent = 'Редактировать реквизиты';
+      toggleVendorFormBtn.setAttribute('aria-expanded', 'false');
+      fillVendorFormFromDetails();
+    }
+
+    function showVendorForm() {
+      if (!vendorForm || !toggleVendorFormBtn) return;
+      fillVendorFormFromDetails();
+      vendorForm.classList.remove('hidden');
+      toggleVendorFormBtn.textContent = 'Скрыть реквизиты';
+      toggleVendorFormBtn.setAttribute('aria-expanded', 'true');
+    }
+
     function loadRecords() {
       try {
         return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -258,6 +417,76 @@
 
     function saveRecords(records) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    function exportRegistry() {
+      const records = loadRecords();
+      const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'registry.json';
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importRegistryFromFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (!Array.isArray(data)) {
+            alert('Файл должен содержать массив записей реестра.');
+            return;
+          }
+
+          const sanitized = data.filter(item => item && typeof item === 'object' && item.number && item.date && item.time);
+          if (!sanitized.length) {
+            alert('Не удалось найти валидные записи в файле.');
+            return;
+          }
+
+          saveRecords(sanitized);
+          render();
+          alert('Реестр обновлён из файла.');
+        } catch (error) {
+          alert(`Не удалось прочитать файл: ${error.message}`);
+        } finally {
+          importRegistryInput.value = '';
+        }
+      };
+
+      reader.onerror = () => {
+        alert('Ошибка чтения файла.');
+        importRegistryInput.value = '';
+      };
+
+      reader.readAsText(file);
+    }
+
+    function loadStoredVendorDetails() {
+      try {
+        return JSON.parse(localStorage.getItem(VENDOR_STORAGE_KEY)) || null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function saveVendorDetails(details) {
+      localStorage.setItem(VENDOR_STORAGE_KEY, JSON.stringify(details));
+    }
+
+    function loadSequenceOverrides() {
+      try {
+        return JSON.parse(localStorage.getItem(NUMBER_OVERRIDE_KEY)) || {};
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function saveSequenceOverrides(overrides) {
+      localStorage.setItem(NUMBER_OVERRIDE_KEY, JSON.stringify(overrides));
     }
 
     function formatDate(date) {
@@ -287,17 +516,49 @@
       return `${y}${m}${day}`;
     }
 
+    function maxSequenceForPrefix(records, prefix) {
+      return records.reduce((max, record) => {
+        if (typeof record.number !== 'string') return max;
+        if (!record.number.startsWith(`${prefix}-`)) return max;
+        const [, suffix] = record.number.split('-');
+        const parsed = Number.parseInt(suffix, 10);
+        if (!Number.isFinite(parsed)) return max;
+        return Math.max(max, parsed);
+      }, 0);
+    }
+
     function nextNumber(records, date) {
       const prefix = todayNumberPrefix(date);
-      const sameDay = records.filter(r => r.date === formatDate(date));
-      const seq = sameDay.length + 1;
+      const overrides = loadSequenceOverrides();
+      const overrideSeq = overrides[prefix];
+      const maxSeq = maxSequenceForPrefix(records, prefix);
+      const seq = Number.isFinite(overrideSeq) && overrideSeq > 0
+        ? overrideSeq
+        : maxSeq + 1;
       return `${prefix}-${String(seq).padStart(3, '0')}`;
     }
 
     function renderCurrentNumber() {
       const records = loadRecords();
-      const number = nextNumber(records, new Date());
-      currentNumberEl.textContent = `Следующий номер: ${number}`;
+      const today = new Date();
+      const prefix = todayNumberPrefix(today);
+      const overrides = loadSequenceOverrides();
+      const overrideSeq = overrides[prefix];
+      const number = nextNumber(records, today);
+      currentNumberEl.textContent = Number.isFinite(overrideSeq) && overrideSeq > 0
+        ? `Следующий номер (ручной): ${number}`
+        : `Следующий номер: ${number}`;
+
+      if (numberPrefixInput) {
+        numberPrefixInput.value = `${prefix}-`;
+      }
+
+      if (numberSequenceInput) {
+        const suggested = Number.isFinite(overrideSeq) && overrideSeq > 0
+          ? overrideSeq
+          : maxSequenceForPrefix(records, prefix) + 1;
+        numberSequenceInput.value = suggested;
+      }
     }
 
     function renderRegistry() {
@@ -318,7 +579,10 @@
           <td>${record.service}</td>
           <td>${formatAmountDisplay(amountValue)}</td>
           <td>${record.payment}</td>
-          <td class="actions"><button data-number="${record.number}" class="download">Скачать PDF</button></td>
+          <td class="actions">
+            <button data-number="${record.number}" class="download">Скачать PDF</button>
+            <button data-number="${record.number}" class="delete">Удалить</button>
+          </td>
         `;
         registryBody.appendChild(row);
       });
@@ -459,15 +723,76 @@
       }
     }
 
-    function handleDownload(event) {
-      if (event.target.classList.contains('download')) {
-        const number = event.target.getAttribute('data-number');
+    function handleRegistryClick(event) {
+      const target = event.target;
+
+      if (target.classList.contains('download')) {
+        const number = target.getAttribute('data-number');
         const records = loadRecords();
         const record = records.find(r => r.number === number);
         if (record) {
           downloadPdf(record);
         }
+        return;
       }
+
+      if (target.classList.contains('delete')) {
+        const number = target.getAttribute('data-number');
+        if (!number) return;
+        if (!confirm(`Удалить запись ${number}?`)) return;
+        const updatedRecords = loadRecords().filter(r => r.number !== number);
+        saveRecords(updatedRecords);
+        render();
+      }
+    }
+
+    function handleNumberingSubmit(event) {
+      event.preventDefault();
+      const prefix = todayNumberPrefix(new Date());
+      const seq = Number(numberSequenceInput.value);
+      if (!Number.isFinite(seq) || seq <= 0 || seq > 999) {
+        alert('Укажите суффикс от 1 до 999.');
+        return;
+      }
+
+      const overrides = loadSequenceOverrides();
+      overrides[prefix] = Math.floor(seq);
+      saveSequenceOverrides(overrides);
+      renderCurrentNumber();
+    }
+
+    function handleResetNumbering() {
+      const prefix = todayNumberPrefix(new Date());
+      const overrides = loadSequenceOverrides();
+      delete overrides[prefix];
+      saveSequenceOverrides(overrides);
+      renderCurrentNumber();
+    }
+
+    function handleVendorSubmit(event) {
+      event.preventDefault();
+      const updated = {
+        ...ipDetails,
+        name: document.getElementById('vendor-name').value.trim(),
+        inn: document.getElementById('vendor-inn').value.trim(),
+        ogrnip: document.getElementById('vendor-ogrnip').value.trim(),
+        taxRegime: document.getElementById('vendor-tax').value.trim(),
+        activity: document.getElementById('vendor-activity').value.trim(),
+        okved: document.getElementById('vendor-okved').value.trim(),
+        location: document.getElementById('vendor-location').value.trim(),
+        bank: document.getElementById('vendor-bank').value.trim(),
+        account: document.getElementById('vendor-account').value.trim(),
+        bik: document.getElementById('vendor-bik').value.trim()
+      };
+
+      if (!updated.name) {
+        alert('Введите наименование ИП.');
+        return;
+      }
+
+      ipDetails = updated;
+      saveVendorDetails(updated);
+      hideVendorForm();
     }
 
     toggleButtons.forEach(button => {
@@ -510,13 +835,61 @@
 
       records.push(record);
       saveRecords(records);
+
+      const prefix = todayNumberPrefix(now);
+      const overrides = loadSequenceOverrides();
+      const [, suffix] = record.number.split('-');
+      const parsedSuffix = Number.parseInt(suffix, 10);
+      if (Number.isFinite(overrides[prefix])) {
+        overrides[prefix] = Number.isFinite(parsedSuffix) ? parsedSuffix + 1 : overrides[prefix];
+        saveSequenceOverrides(overrides);
+      }
+
       render();
       downloadPdf(record);
       form.reset();
       resetEditableFields();
     });
 
-    registryBody.addEventListener('click', handleDownload);
+    if (numberingForm) {
+      numberingForm.addEventListener('submit', handleNumberingSubmit);
+    }
+
+    if (resetNumberingBtn) {
+      resetNumberingBtn.addEventListener('click', handleResetNumbering);
+    }
+
+    if (vendorForm) {
+      vendorForm.addEventListener('submit', handleVendorSubmit);
+    }
+
+    if (cancelVendorBtn) {
+      cancelVendorBtn.addEventListener('click', () => hideVendorForm());
+    }
+
+    if (toggleVendorFormBtn) {
+      toggleVendorFormBtn.addEventListener('click', () => {
+        if (vendorForm.classList.contains('hidden')) {
+          showVendorForm();
+        } else {
+          hideVendorForm();
+        }
+      });
+    }
+
+    if (exportRegistryBtn) {
+      exportRegistryBtn.addEventListener('click', exportRegistry);
+    }
+
+    if (importRegistryBtn && importRegistryInput) {
+      importRegistryBtn.addEventListener('click', () => importRegistryInput.click());
+      importRegistryInput.addEventListener('change', (event) => {
+        const file = event.target.files && event.target.files[0];
+        importRegistryFromFile(file);
+      });
+    }
+
+    registryBody.addEventListener('click', handleRegistryClick);
 
     (function init() {
       resetEditableFields();
