@@ -106,3 +106,9 @@
     }
 
       resetPaymentDateTime();
+        if (typeof DEJAVU_SANS_FONT !== 'string' || !DEJAVU_SANS_FONT.length) {
+          console.warn('Font data missing, falling back to built-in font');
+          doc.setFont('helvetica', 'normal');
+          return;
+        }
+
