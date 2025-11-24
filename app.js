@@ -1,4 +1,213 @@
 (function () {
+  const FALLBACK_STYLE = `
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #f4f6fb; color: #1f2933; }
+    .page { max-width: 1100px; margin: 24px auto 48px; padding: 0 16px; display: flex; flex-direction: column; gap: 20px; }
+    .section, header { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 20px 24px; box-shadow: 0 6px 14px rgba(0,0,0,0.06); }
+    h1, h2 { margin: 0 0 8px; }
+    p { margin: 0 0 12px; color: #4b5563; }
+    form { display: grid; gap: 12px; }
+    label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #4b5563; }
+    input, textarea, select, button { font: inherit; padding: 12px; border-radius: 10px; border: 1px solid #e5e7eb; box-sizing: border-box; }
+    button { cursor: pointer; background: #2563eb; color: #fff; border-color: #2563eb; font-weight: 600; }
+    .notice { padding: 12px 14px; border: 1px solid #e5e7eb; background: #f7f9fd; border-radius: 12px; color: #4b5563; line-height: 1.5; }
+    table { width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 14px; }
+    .hidden { display: none; }
+  `;
+
+  const FALLBACK_MARKUP = `
+    <main class="page">
+      <header>
+        <h1>Генератор БСО</h1>
+        <p>Если страница загрузилась без основного содержимого, мы восстановили шаблон автоматически.</p>
+      </header>
+      <section class="section" aria-labelledby="create-title">
+        <div class="section-heading">
+          <h2 id="create-title">Создать БСО</h2>
+          <p class="section-description">Дата и время подставятся автоматически, вы меняете только количество и цену.</p>
+        </div>
+        <div class="notice" id="current-number">Номер генерируется автоматически по формуле YYYYMMDD-XXX, время проставляется текущее в момент создания PDF.</div>
+        <div class="notice success hidden" id="creation-success" role="status" aria-live="polite"></div>
+        <form id="bso-form">
+          <div class="field-row">
+            <label>
+              Клиент
+              <input type="text" id="client" name="client" value="Физлицо" readonly required />
+            </label>
+            <button type="button" class="toggle-edit" data-target="client">Изменить</button>
+          </div>
+          <div class="field-row">
+            <label>
+              Услуга
+              <input type="text" id="service" name="service" value="Образовательные услуги" readonly required />
+            </label>
+            <button type="button" class="toggle-edit" data-target="service">Изменить</button>
+          </div>
+          <label>
+            Количество занятий
+            <input type="number" id="quantity" name="quantity" min="1" step="1" value="1" required />
+          </label>
+          <label>
+            Цена за 1 занятие, ₽
+            <input type="number" id="unitPrice" name="unitPrice" min="0" step="0.01" required />
+          </label>
+          <div class="field-row">
+            <label>
+              Способ оплаты
+              <input
+                type="text"
+                id="payment"
+                name="payment"
+                value="безналичная (перевод по QR-коду на расчётный счёт ИП)"
+                readonly
+                required
+              />
+            </label>
+            <button type="button" class="toggle-edit" data-target="payment">Изменить</button>
+          </div>
+          <button type="submit">Создать PDF</button>
+        </form>
+      </section>
+      <section class="section" aria-labelledby="numbering-title">
+        <h2 id="numbering-title">Управление нумерацией</h2>
+        <form id="numbering-form" class="inline-fields" aria-describedby="numbering-hint">
+          <label>
+            Префикс (сегодня)
+            <input type="text" id="number-prefix" readonly />
+          </label>
+          <label>
+            Суффикс следующего номера
+            <input type="number" id="number-sequence" name="number-sequence" min="1" max="999" required />
+          </label>
+          <div class="actions">
+            <button type="submit">Применить вручную</button>
+            <button type="button" id="reset-numbering">Сбросить на авто</button>
+          </div>
+        </form>
+        <p id="numbering-hint" class="notice">При необходимости укажите суффикс следующего номера (только цифры, 1–999). После ручного задания нумерация продолжится последовательно.</p>
+      </section>
+      <section class="section" aria-labelledby="vendor-title">
+        <div class="section-header">
+          <div class="section-heading">
+            <h2 id="vendor-title">Данные ИП</h2>
+            <p class="section-description">Реквизиты подставляются в PDF и сохраняются локально. Можно отредактировать их прямо здесь, без правки vendor.json.</p>
+          </div>
+          <div class="section-actions">
+            <button type="button" id="toggle-vendor-form">Редактировать реквизиты</button>
+          </div>
+        </div>
+        <form id="vendor-form" class="hidden">
+          <div class="inline-fields">
+            <label>
+              Наименование
+              <textarea id="vendor-name" required></textarea>
+            </label>
+            <label>
+              ИНН
+              <input type="text" id="vendor-inn" />
+            </label>
+            <label>
+              ОГРНИП
+              <input type="text" id="vendor-ogrnip" />
+            </label>
+            <label>
+              Налоговый режим
+              <input type="text" id="vendor-tax" />
+            </label>
+            <label>
+              Вид деятельности
+              <input type="text" id="vendor-activity" />
+            </label>
+            <label>
+              ОКВЭД
+              <input type="text" id="vendor-okved" />
+            </label>
+            <label>
+              Место деятельности
+              <input type="text" id="vendor-location" />
+            </label>
+            <label>
+              Банк
+              <input type="text" id="vendor-bank" />
+            </label>
+            <label>
+              Р/с
+              <input type="text" id="vendor-account" />
+            </label>
+            <label>
+              БИК
+              <input type="text" id="vendor-bik" />
+            </label>
+          </div>
+          <div class="actions">
+            <button type="submit">Сохранить реквизиты</button>
+            <button type="button" id="cancel-vendor">Отмена</button>
+          </div>
+        </form>
+      </section>
+      <section class="section" aria-labelledby="registry-title">
+        <div class="section-header">
+          <h2 id="registry-title">Реестр БСО</h2>
+          <div class="section-actions">
+            <button type="button" id="export-registry">Выгрузить реестр в JSON</button>
+            <button type="button" id="import-registry">Загрузить реестр из файла</button>
+          </div>
+        </div>
+        <p class="section-description">Хранится только в этом браузере. При очистке данных реестр исчезнет.</p>
+        <input type="file" id="registry-import-file" accept="application/json" class="hidden" />
+        <table id="registry">
+          <thead>
+            <tr>
+              <th>Номер</th>
+              <th>Дата</th>
+              <th>Время</th>
+              <th>Клиент</th>
+              <th>Услуга</th>
+              <th>Сумма</th>
+              <th>Оплата</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </main>
+  `;
+
+  function ensureErrorContainer() {
+    if (!document.getElementById('app-error')) {
+      const container = document.createElement('div');
+      container.id = 'app-error';
+      container.className = 'notice hidden';
+      container.setAttribute('role', 'alert');
+      container.style.maxWidth = '1100px';
+      container.style.margin = '12px auto';
+      document.body.prepend(container);
+    }
+  }
+
+  function ensureBaseMarkup() {
+    const hasForm = document.getElementById('bso-form');
+    const hasRegistry = document.querySelector('#registry tbody');
+    if (hasForm && hasRegistry) {
+      return;
+    }
+
+    if (!document.getElementById('fallback-style')) {
+      const style = document.createElement('style');
+      style.id = 'fallback-style';
+      style.textContent = FALLBACK_STYLE;
+      document.head.appendChild(style);
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = FALLBACK_MARKUP.trim();
+    const main = wrapper.querySelector('main');
+    if (main) {
+      document.body.appendChild(main);
+    }
+  }
+
   function showFatalError(message) {
     const fallback = document.getElementById('app-error');
     if (fallback) {
@@ -8,6 +217,9 @@
   }
 
   function initApp() {
+    ensureBaseMarkup();
+    ensureErrorContainer();
+
     const pdfService = window.PdfService || {};
     const safeFormatAmountDisplay = pdfService.formatAmountDisplay || ((value) => value);
     const downloadPdf = pdfService.downloadPdf;
