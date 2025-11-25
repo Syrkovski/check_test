@@ -245,6 +245,11 @@
 
   <section class="section" aria-labelledby="registry-title">
     <h2 id="registry-title">Реестр БСО</h2>
+    <div class="actions" style="margin-bottom: 12px; flex-wrap: wrap;">
+      <button type="button" id="exportJson">Выгрузить реестр в JSON</button>
+      <button type="button" id="importJsonBtn">Загрузить реестр из файла</button>
+      <input type="file" id="importJsonInput" accept="application/json" class="hidden" />
+    </div>
     <table id="registry">
       <thead>
         <tr>
@@ -291,6 +296,9 @@
     const manualNumberInput = document.getElementById('manualNumber');
     const saveManualNumberBtn = document.getElementById('saveManualNumber');
     const clearManualNumberBtn = document.getElementById('clearManualNumber');
+    const exportJsonBtn = document.getElementById('exportJson');
+    const importJsonBtn = document.getElementById('importJsonBtn');
+    const importJsonInput = document.getElementById('importJsonInput');
     const vendorForm = document.getElementById('vendor-form');
     const vendorToggleBtn = document.getElementById('toggleVendorForm');
     const vendorResetBtn = document.getElementById('resetVendor');
@@ -468,6 +476,45 @@
       renderRegistry();
     }
 
+    function exportRegistry() {
+      const records = loadRecords();
+      const fileName = `bso-registry-${todayNumberPrefix(new Date())}.json`;
+      const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function importRegistryFromFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          if (!Array.isArray(parsed)) {
+            throw new Error('Файл должен содержать массив записей.');
+          }
+          const cleaned = parsed
+            .filter(item => item && item.number && item.date && item.time)
+            .map(item => ({
+              ...item,
+              createdAt: Number(item.createdAt) || Date.now()
+            }));
+          saveRecords(cleaned);
+          render();
+          alert('Реестр загружен.');
+        } catch (error) {
+          console.error('Import failed', error);
+          alert('Не удалось загрузить файл реестра. Проверьте формат JSON.');
+        }
+      };
+      reader.readAsText(file, 'utf-8');
+    }
+
     function ensureFont(doc) {
       if (!fontRegistered) {
         doc.addFileToVFS('DejaVuSans.ttf', DEJAVU_SANS_FONT);
@@ -612,6 +659,21 @@
         saveRecords(updated);
         render();
       }
+    }
+
+    if (exportJsonBtn) {
+      exportJsonBtn.addEventListener('click', exportRegistry);
+    }
+
+    if (importJsonBtn && importJsonInput) {
+      importJsonBtn.addEventListener('click', () => importJsonInput.click());
+      importJsonInput.addEventListener('change', (event) => {
+        const [file] = event.target.files || [];
+        if (file) {
+          importRegistryFromFile(file);
+        }
+        event.target.value = '';
+      });
     }
 
     toggleButtons.forEach(button => {
