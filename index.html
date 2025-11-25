@@ -153,17 +153,24 @@
     <form id="bso-form">
       <div class="field-row">
         <label>
-          Клиент
+          Клиент (по умолчанию: Физлицо)
           <input type="text" id="client" name="client" value="Физлицо" readonly required />
         </label>
-        <button type="button" class="toggle-edit" data-target="client">Изменить</button>
+        <button type="button" class="toggle-edit" data-target="client">Изменить разово</button>
       </div>
       <div class="field-row">
         <label>
-          Услуга
-          <input type="text" id="service" name="service" value="Образовательные услуги" readonly required />
+          Основание платежа (по умолчанию: Оплата услуг репетиторства по информатике)
+          <input
+            type="text"
+            id="service"
+            name="service"
+            value="Оплата услуг репетиторства по информатике"
+            readonly
+            required
+          />
         </label>
-        <button type="button" class="toggle-edit" data-target="service">Изменить</button>
+        <button type="button" class="toggle-edit" data-target="service">Изменить разово</button>
       </div>
       <label>
         Количество занятий
@@ -185,7 +192,7 @@
             required
           />
         </label>
-        <button type="button" class="toggle-edit" data-target="payment">Изменить</button>
+        <button type="button" class="toggle-edit" data-target="payment">Изменить разово</button>
       </div>
       <button type="submit">Создать PDF</button>
     </form>
@@ -193,8 +200,8 @@
 
   <section class="section" aria-labelledby="vendor-title">
     <h2 id="vendor-title">Данные продавца</h2>
-    <p class="notice">Реквизиты загружаются из vendor.json. Нажмите кнопку ниже, чтобы скорректировать их через форму и сохранить в браузере.</p>
-    <button type="button" id="toggleVendorForm">Изменить реквизиты</button>
+    <p class="notice">Реквизиты загружаются из vendor.json. Нажмите «Изменить шаблон», чтобы скорректировать их через форму и сохранить в браузере.</p>
+    <button type="button" id="toggleVendorForm">Изменить шаблон</button>
     <form id="vendor-form" class="hidden">
       <label>
         Наименование
@@ -344,7 +351,7 @@
       if (!input) return;
       if (isReadonly) {
         input.setAttribute('readonly', 'readonly');
-        button.textContent = 'Изменить';
+        button.textContent = 'Изменить разово';
       } else {
         input.removeAttribute('readonly');
         button.textContent = 'Зафиксировать';
