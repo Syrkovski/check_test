@@ -424,6 +424,28 @@
       return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     }
 
+    function formatDateInputValue(date) {
+      const d = date || new Date();
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${year}-${month}-${day}`;
+    }
+
+    function setDefaultPaymentDateTime(date) {
+      const current = date || new Date();
+      if (manualDateInput) {
+        const value = formatDateInputValue(current);
+        manualDateInput.value = value;
+        manualDateInput.defaultValue = value;
+      }
+      if (manualTimeInput) {
+        const timeValue = formatTime(current);
+        manualTimeInput.value = timeValue;
+        manualTimeInput.defaultValue = timeValue;
+      }
+    }
+
     function normalizeDateInput(value) {
       if (!value) return null;
       const [year, month, day] = value.split('-');
@@ -774,8 +796,7 @@
       render();
       downloadPdf(record);
       form.reset();
-      if (manualDateInput) manualDateInput.value = '';
-      if (manualTimeInput) manualTimeInput.value = '';
+      setDefaultPaymentDateTime();
       resetEditableFields();
     });
 
@@ -821,6 +842,7 @@
     (async function init() {
       resetEditableFields();
       await loadVendorDetails();
+      setDefaultPaymentDateTime();
       render();
     })();
   </script>
