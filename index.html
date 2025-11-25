@@ -136,6 +136,58 @@
     <p>Минимальный прототип для ИП без кассы: фиксированный шаблон PDF, авто-нумерация и реестр.</p>
   </header>
 
+  <section class="section" aria-labelledby="vendor-title">
+    <h2 id="vendor-title">Данные продавца</h2>
+    <p class="notice">Реквизиты загружаются из vendor.json. Нажмите «Изменить шаблон», чтобы скорректировать их через форму и сохранить в браузере.</p>
+    <button type="button" id="toggleVendorForm">Изменить шаблон</button>
+    <form id="vendor-form" class="hidden">
+      <label>
+        Наименование
+        <input type="text" id="vendor-name" required />
+      </label>
+      <label>
+        ИНН
+        <input type="text" id="vendor-inn" />
+      </label>
+      <label>
+        ОГРНИП
+        <input type="text" id="vendor-ogrnip" />
+      </label>
+      <label>
+        Место деятельности
+        <input type="text" id="vendor-location" />
+      </label>
+      <label>
+        Налоговый режим
+        <input type="text" id="vendor-taxRegime" />
+      </label>
+      <label>
+        Вид деятельности
+        <input type="text" id="vendor-activity" />
+      </label>
+      <label>
+        Код ОКВЭД
+        <input type="text" id="vendor-okved" />
+      </label>
+      <label>
+        Банк
+        <input type="text" id="vendor-bank" />
+      </label>
+      <label>
+        Расчётный счёт
+        <input type="text" id="vendor-account" />
+      </label>
+      <label>
+        БИК
+        <input type="text" id="vendor-bik" />
+      </label>
+      <div class="actions">
+        <button type="submit">Сохранить реквизиты</button>
+        <button type="button" id="resetVendor">Сбросить к файлу</button>
+      </div>
+    </form>
+  </section>
+
   <section class="section" aria-labelledby="create-title">
     <h2 id="create-title">Создать БСО</h2>
     <div class="notice" id="current-number">Номер генерируется автоматически по формуле YYYYMMDD-XXX, время проставляется текущее в момент создания PDF.</div>
@@ -195,58 +247,6 @@
         <button type="button" class="toggle-edit" data-target="payment">Изменить разово</button>
       </div>
       <button type="submit">Создать PDF</button>
-    </form>
-  </section>
-
-  <section class="section" aria-labelledby="vendor-title">
-    <h2 id="vendor-title">Данные продавца</h2>
-    <p class="notice">Реквизиты загружаются из vendor.json. Нажмите «Изменить шаблон», чтобы скорректировать их через форму и сохранить в браузере.</p>
-    <button type="button" id="toggleVendorForm">Изменить шаблон</button>
-    <form id="vendor-form" class="hidden">
-      <label>
-        Наименование
-        <input type="text" id="vendor-name" required />
-      </label>
-      <label>
-        ИНН
-        <input type="text" id="vendor-inn" />
-      </label>
-      <label>
-        ОГРНИП
-        <input type="text" id="vendor-ogrnip" />
-      </label>
-      <label>
-        Место деятельности
-        <input type="text" id="vendor-location" />
-      </label>
-      <label>
-        Налоговый режим
-        <input type="text" id="vendor-taxRegime" />
-      </label>
-      <label>
-        Вид деятельности
-        <input type="text" id="vendor-activity" />
-      </label>
-      <label>
-        Код ОКВЭД
-        <input type="text" id="vendor-okved" />
-      </label>
-      <label>
-        Банк
-        <input type="text" id="vendor-bank" />
-      </label>
-      <label>
-        Расчётный счёт
-        <input type="text" id="vendor-account" />
-      </label>
-      <label>
-        БИК
-        <input type="text" id="vendor-bik" />
-      </label>
-      <div class="actions">
-        <button type="submit">Сохранить реквизиты</button>
-        <button type="button" id="resetVendor">Сбросить к файлу</button>
-      </div>
     </form>
   </section>
 
