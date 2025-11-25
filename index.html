@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Генератор БСО</title>
+  <title>Генератор квитанций</title>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
   <style>
     :root {
@@ -88,6 +88,13 @@
       color: #0f172a;
       border-radius: 10px;
       transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+    }
+
+    input[readonly], textarea[readonly] {
+      background: #f8fafc;
+      color: #6b7280;
+      border-style: dashed;
+      cursor: not-allowed;
     }
 
     input:focus, select:focus, textarea:focus {
@@ -202,6 +209,12 @@
       margin-bottom: 12px;
     }
 
+    .readonly-hint {
+      margin: -4px 0 12px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
     .section-header .badge {
       padding: 6px 10px;
       border-radius: 999px;
@@ -217,7 +230,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>Генератор БСО</h1>
+      <h1>Генератор квитанций</h1>
       <p>Минимальный прототип для ИП без кассы: фиксированный шаблон PDF, авто-нумерация и реестр.</p>
     </header>
 
@@ -226,7 +239,7 @@
         <div class="badge">Шаблон</div>
         <h2 id="vendor-title">Данные продавца</h2>
       </div>
-      <p class="notice">Реквизиты загружаются из vendor.json. Нажмите «Изменить шаблон», чтобы скорректировать их через форму и сохранить в браузере.</p>
+      <p class="notice">Реквизиты подтягиваются из vendor.json. Нажмите «Изменить шаблон», чтобы обновить их и сохранить в браузере.</p>
       <button type="button" id="toggleVendorForm">Изменить шаблон</button>
       <form id="vendor-form" class="hidden">
         <label>
@@ -279,9 +292,10 @@
     <section class="section" aria-labelledby="create-title">
       <div class="section-header">
         <div class="badge">Создание</div>
-        <h2 id="create-title">Создать БСО</h2>
+        <h2 id="create-title">Создать квитанцию</h2>
       </div>
-      <div class="notice" id="current-number">Номер генерируется автоматически по формуле YYYYMMDD-XXX, дата и время проставляются текущие в момент создания PDF (можно задать вручную ниже).</div>
+      <div class="notice" id="current-number">Номер квитанции генерируется автоматически по формуле YYYYMMDD-XXX, дата и время проставляются текущие в момент создания PDF (можно задать вручную ниже).</div>
+      <p class="readonly-hint">Поля с серой подложкой заблокированы по умолчанию — нажмите «Изменить разово», чтобы активировать их для одного документа.</p>
       <div class="inline-form" aria-label="Принудительная нумерация">
         <label>
           Принудительный номер
@@ -291,7 +305,7 @@
           <button type="button" id="saveManualNumber">Сохранить номер</button>
           <button type="button" id="clearManualNumber" class="secondary">Сбросить</button>
         </div>
-        <p class="notice" id="manual-number-hint">Если указан, будет использован для следующего БСО, после чего вернётся авто-нумерация.</p>
+        <p class="notice" id="manual-number-hint">Если указан, будет использован для следующей квитанции, после чего вернётся авто-нумерация.</p>
       </div>
       <form id="bso-form">
         <div class="field-row">
@@ -366,7 +380,7 @@
     <section class="section" aria-labelledby="registry-title">
       <div class="section-header">
         <div class="badge">Учёт</div>
-        <h2 id="registry-title">Реестр БСО</h2>
+        <h2 id="registry-title">Реестр квитанций</h2>
       </div>
       <div class="actions" style="margin-bottom: 12px; flex-wrap: wrap;">
         <button type="button" id="exportJson">Выгрузить реестр в JSON</button>
