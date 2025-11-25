@@ -74,6 +74,7 @@
     const amountDisplay = `${formatAmountDisplay(totalAmount)} р`;
 
     addStrongSeparator();
+    addStrongSeparator();
     doc.setFontSize(14);
     doc.text('КВИТАНЦИЯ ОБ ОПЛАТЕ УСЛУГ', center, y, { align: 'center' });
     y += 10;
@@ -81,6 +82,7 @@
     doc.setFontSize(12);
     doc.text(`Документ № ${record.number} от ${record.date} за ${record.time}`, center, y, { align: 'center' });
     y += 12;
+    addStrongSeparator();
     addStrongSeparator();
 
     addSection('1. ПРОДАВЕЦ', () => {
@@ -101,9 +103,9 @@
     });
 
     addSection('4. СОСТАВ РАСЧЁТА', () => {
-      pushLines(serviceName || basis);
-      pushLines(`Цена 1 занятия: ${unitPriceDisplay}`);
+      pushLines(`Наименование услуги: ${serviceName || basis}`);
       pushLines(`Количество занятий: ${quantity}`);
+      pushLines(`Цена за 1 занятие, ₽: ${unitPriceDisplay}`);
       pushLines(`Сумма: ${amountDisplay}`);
     });
 
@@ -118,7 +120,7 @@
     });
 
     addSection('6. ПОДТВЕРЖДЕНИЕ ОПЛАТЫ', () => {
-      pushLines(`Дата получения: ${record.date} за ${record.time}`);
+      pushLines(`Дата получения оплаты: ${record.date} за ${record.time}`);
     });
 
     addStrongSeparator();
