@@ -29,8 +29,8 @@
     const left = 14;
     const center = 105;
     const contentWidth = 182;
-    const dashSeparator = '--------------------------------------------------------------------------';
-    const strongSeparator = '==========================================================================';
+    const dashSeparator = '---------------------------------------------------------------------------------------';
+    const strongSeparator = '======================================';
     let y = 16;
 
     const addSeparator = () => {
@@ -47,10 +47,10 @@
       addSeparator();
       doc.text(title, left, y);
       y += 7;
+      addSeparator();
       if (typeof body === 'function') {
         body();
       }
-      addSeparator();
       y += 4;
     };
 
@@ -72,18 +72,19 @@
       ? Number(record.amount)
       : Number((unitPrice * quantity).toFixed(2));
     const amountDisplay = `${formatAmountDisplay(totalAmount)} р`;
-
-    addStrongSeparator();
+    
+    doc.setFontSize(12);
     addStrongSeparator();
     doc.setFontSize(14);
-    doc.text('КВИТАНЦИЯ ОБ ОПЛАТЕ УСЛУГ', center, y, { align: 'center' });
-    y += 10;
-
+    doc.text('                    КВИТАНЦИЯ ОБ ОПЛАТЕ УСЛУГ', left, y, { align: 'left' });
+    y += 5;
     doc.setFontSize(12);
-    doc.text(`Документ № ${record.number} от ${record.date} за ${record.time}`, center, y, { align: 'center' });
+    addStrongSeparator();
+    y += 5;
+
+    
+    doc.text(`Документ № ${record.number} от ${record.date} за ${record.time}`, left, y, { align: 'left' });
     y += 12;
-    addStrongSeparator();
-    addStrongSeparator();
 
     addSection('1. ПРОДАВЕЦ', () => {
       pushLines(ipDetails.name);
@@ -109,7 +110,6 @@
       pushLines(`Сумма: ${amountDisplay}`);
     });
 
-    addStrongSeparator();
     doc.setFontSize(13);
     doc.text(`ИТОГО К ОПЛАТЕ: ${amountDisplay}`, left, y);
     y += 10;
@@ -123,6 +123,7 @@
       pushLines(`Дата получения оплаты: ${record.date} за ${record.time}`);
     });
 
+    doc.setFontSize(12);
     addStrongSeparator();
 
     return doc;
