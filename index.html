@@ -235,6 +235,11 @@
       width: min(100%, 760px);
       margin: 0 auto;
     }
+
+    .section-content.section-content--wide {
+      max-width: 960px;
+      width: min(100%, 960px);
+    }
   </style>
 </head>
 <body>
@@ -245,66 +250,68 @@
     </header>
 
     <section class="section" aria-labelledby="vendor-title">
-      <div class="section-header">
-        <div class="badge">Шаблон</div>
-        <h2 id="vendor-title">Данные продавца</h2>
-      </div>
-      <p class="notice">Реквизиты подтягиваются из vendor.json. Нажмите «Изменить шаблон», чтобы обновить их и сохранить в браузере.</p>
-      <button type="button" id="toggleVendorForm">Изменить шаблон</button>
-      <form id="vendor-form" class="hidden">
-        <label>
-          Наименование
-          <input type="text" id="vendor-name" required />
-        </label>
-        <label>
-          ИНН
-          <input type="text" id="vendor-inn" />
-        </label>
-        <label>
-          ОГРНИП
-          <input type="text" id="vendor-ogrnip" />
-        </label>
-        <label>
-          Место деятельности
-          <input type="text" id="vendor-location" />
-        </label>
-        <label>
-          Налоговый режим
-          <input type="text" id="vendor-taxRegime" />
-        </label>
-        <label>
-          Вид деятельности
-          <input type="text" id="vendor-activity" />
-        </label>
-        <label>
-          Код ОКВЭД
-          <input type="text" id="vendor-okved" />
-        </label>
-        <label>
-          Банк
-          <input type="text" id="vendor-bank" />
-        </label>
-        <label>
-          Расчётный счёт
-          <input type="text" id="vendor-account" />
-        </label>
-        <label>
-          БИК
-          <input type="text" id="vendor-bik" />
-        </label>
-        <div class="actions">
-          <button type="submit">Сохранить реквизиты</button>
-          <button type="button" id="resetVendor" class="secondary">Сбросить к файлу</button>
+      <div class="section-content">
+        <div class="section-header">
+          <div class="badge">Шаблон</div>
+          <h2 id="vendor-title">Данные продавца</h2>
         </div>
-      </form>
+        <p class="notice">Реквизиты подтягиваются из vendor.json. Нажмите «Изменить шаблон», чтобы обновить их и сохранить в браузере.</p>
+        <button type="button" id="toggleVendorForm">Изменить шаблон</button>
+        <form id="vendor-form" class="hidden">
+          <label>
+            Наименование
+            <input type="text" id="vendor-name" required />
+          </label>
+          <label>
+            ИНН
+            <input type="text" id="vendor-inn" />
+          </label>
+          <label>
+            ОГРНИП
+            <input type="text" id="vendor-ogrnip" />
+          </label>
+          <label>
+            Место деятельности
+            <input type="text" id="vendor-location" />
+          </label>
+          <label>
+            Налоговый режим
+            <input type="text" id="vendor-taxRegime" />
+          </label>
+          <label>
+            Вид деятельности
+            <input type="text" id="vendor-activity" />
+          </label>
+          <label>
+            Код ОКВЭД
+            <input type="text" id="vendor-okved" />
+          </label>
+          <label>
+            Банк
+            <input type="text" id="vendor-bank" />
+          </label>
+          <label>
+            Расчётный счёт
+            <input type="text" id="vendor-account" />
+          </label>
+          <label>
+            БИК
+            <input type="text" id="vendor-bik" />
+          </label>
+          <div class="actions">
+            <button type="submit">Сохранить реквизиты</button>
+            <button type="button" id="resetVendor" class="secondary">Сбросить к файлу</button>
+          </div>
+        </form>
+      </div>
     </section>
 
     <section class="section" aria-labelledby="create-title">
-      <div class="section-header">
-        <div class="badge">Создание</div>
-        <h2 id="create-title">Создать квитанцию</h2>
-      </div>
       <div class="section-content">
+        <div class="section-header">
+          <div class="badge">Создание</div>
+          <h2 id="create-title">Создать квитанцию</h2>
+        </div>
         <div class="notice" id="current-number">Номер квитанции генерируется автоматически: день + номер за день. Дата и время в реквизитах проставляются текущие (можно задать вручную ниже).</div>
         <p class="readonly-hint">Поля с серой подложкой заблокированы по умолчанию — нажмите «Изменить», чтобы активировать их для одного документа.</p>
         <div class="inline-form" aria-label="Принудительная нумерация">
@@ -396,30 +403,32 @@
     </section>
 
     <section class="section" aria-labelledby="registry-title">
-      <div class="section-header">
-        <div class="badge">Учёт</div>
-        <h2 id="registry-title">Реестр квитанций</h2>
+      <div class="section-content section-content--wide">
+        <div class="section-header">
+          <div class="badge">Учёт</div>
+          <h2 id="registry-title">Реестр квитанций</h2>
+        </div>
+        <div class="actions" style="margin-bottom: 12px; flex-wrap: wrap;">
+          <button type="button" id="exportJson">Выгрузить реестр в JSON</button>
+          <button type="button" id="importJsonBtn" class="secondary">Загрузить реестр из файла</button>
+          <input type="file" id="importJsonInput" accept="application/json" class="hidden" />
+        </div>
+        <table id="registry">
+          <thead>
+            <tr>
+              <th>Номер</th>
+              <th>Дата</th>
+              <th>Время</th>
+              <th>Клиент</th>
+              <th>Услуга</th>
+              <th>Сумма</th>
+              <th>Оплата</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
-      <div class="actions" style="margin-bottom: 12px; flex-wrap: wrap;">
-        <button type="button" id="exportJson">Выгрузить реестр в JSON</button>
-        <button type="button" id="importJsonBtn" class="secondary">Загрузить реестр из файла</button>
-        <input type="file" id="importJsonInput" accept="application/json" class="hidden" />
-      </div>
-      <table id="registry">
-        <thead>
-          <tr>
-            <th>Номер</th>
-            <th>Дата</th>
-            <th>Время</th>
-            <th>Клиент</th>
-            <th>Услуга</th>
-            <th>Сумма</th>
-            <th>Оплата</th>
-            <th>Действия</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
     </section>
   </div>
 
