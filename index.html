@@ -294,18 +294,24 @@
         <div class="badge">Создание</div>
         <h2 id="create-title">Создать квитанцию</h2>
       </div>
-      <div class="notice" id="current-number">Номер квитанции генерируется автоматически по формуле YYYYMMDD-XXX, дата и время проставляются текущие в момент создания PDF (можно задать вручную ниже).</div>
-      <p class="readonly-hint">Поля с серой подложкой заблокированы по умолчанию — нажмите «Изменить разово», чтобы активировать их для одного документа.</p>
+      <div class="notice" id="current-number">Номер квитанции генерируется автоматически: день + номер за день. Дата и время в реквизитах проставляются текущие (можно задать вручную ниже).</div>
+      <p class="readonly-hint">Поля с серой подложкой заблокированы по умолчанию — нажмите «Изменить», чтобы активировать их для одного документа.</p>
       <div class="inline-form" aria-label="Принудительная нумерация">
-        <label>
-          Принудительный номер
-          <input type="text" id="manualNumber" placeholder="YYYYMMDD-001" />
-        </label>
+        <div class="field-row">
+          <label>
+            День квитанции (по умолчанию сегодня)
+            <input type="date" id="manualNumberDay" />
+          </label>
+          <label>
+            Номер за день
+            <input type="number" id="manualSequence" min="1" step="1" />
+          </label>
+        </div>
         <div class="actions">
-          <button type="button" id="saveManualNumber">Сохранить номер</button>
+          <button type="button" id="saveManualNumber">Сохранить день и номер</button>
           <button type="button" id="clearManualNumber" class="secondary">Сбросить</button>
         </div>
-        <p class="notice" id="manual-number-hint">Если указан, будет использован для следующей квитанции, после чего вернётся авто-нумерация.</p>
+        <p class="notice" id="manual-number-hint">При сохранении заданные день и номер применятся к следующей квитанции, после чего снова включится авто-нумерация.</p>
       </div>
       <form id="bso-form">
         <div class="field-row">
@@ -313,7 +319,7 @@
             Клиент (по умолчанию: Физлицо)
             <input type="text" id="client" name="client" value="Физлицо" readonly required />
           </label>
-          <button type="button" class="toggle-edit secondary" data-target="client">Изменить разово</button>
+          <button type="button" class="toggle-edit secondary" data-target="client">Изменить</button>
         </div>
         <div class="field-row">
           <label>
@@ -327,7 +333,7 @@
               required
             />
           </label>
-          <button type="button" class="toggle-edit secondary" data-target="serviceName">Изменить разово</button>
+          <button type="button" class="toggle-edit secondary" data-target="serviceName">Изменить</button>
         </div>
         <div class="field-row">
           <label>
@@ -341,7 +347,7 @@
               required
             />
           </label>
-          <button type="button" class="toggle-edit secondary" data-target="basis">Изменить разово</button>
+          <button type="button" class="toggle-edit secondary" data-target="basis">Изменить</button>
         </div>
         <label>
           Количество занятий
@@ -363,7 +369,7 @@
               required
             />
           </label>
-          <button type="button" class="toggle-edit secondary" data-target="payment">Изменить разово</button>
+          <button type="button" class="toggle-edit secondary" data-target="payment">Изменить</button>
         </div>
         <label>
           Дата платежа (можно заполнить вручную)
