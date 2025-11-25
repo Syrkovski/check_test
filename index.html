@@ -229,6 +229,12 @@
       letter-spacing: 0.01em;
       text-transform: uppercase;
     }
+
+    .section-content {
+      max-width: 760px;
+      width: min(100%, 760px);
+      margin: 0 auto;
+    }
   </style>
 </head>
 <body>
@@ -298,93 +304,95 @@
         <div class="badge">Создание</div>
         <h2 id="create-title">Создать квитанцию</h2>
       </div>
-      <div class="notice" id="current-number">Номер квитанции генерируется автоматически: день + номер за день. Дата и время в реквизитах проставляются текущие (можно задать вручную ниже).</div>
-      <p class="readonly-hint">Поля с серой подложкой заблокированы по умолчанию — нажмите «Изменить», чтобы активировать их для одного документа.</p>
-      <div class="inline-form" aria-label="Принудительная нумерация">
-        <div class="field-row">
+      <div class="section-content">
+        <div class="notice" id="current-number">Номер квитанции генерируется автоматически: день + номер за день. Дата и время в реквизитах проставляются текущие (можно задать вручную ниже).</div>
+        <p class="readonly-hint">Поля с серой подложкой заблокированы по умолчанию — нажмите «Изменить», чтобы активировать их для одного документа.</p>
+        <div class="inline-form" aria-label="Принудительная нумерация">
+          <div class="field-row">
+            <label>
+              День квитанции (по умолчанию сегодня)
+              <input type="date" id="manualNumberDay" />
+            </label>
+            <label>
+              Номер за день
+              <input type="number" id="manualSequence" min="1" step="1" />
+            </label>
+          </div>
+          <div class="actions">
+            <button type="button" id="saveManualNumber">Сохранить день и номер</button>
+            <button type="button" id="clearManualNumber" class="secondary">Сбросить</button>
+          </div>
+          <p class="notice" id="manual-number-hint">При сохранении заданные день и номер применятся к следующей квитанции, после чего снова включится авто-нумерация.</p>
+        </div>
+        <form id="bso-form">
+          <div class="field-row">
+            <label>
+              Клиент (по умолчанию: Физлицо)
+              <input type="text" id="client" name="client" value="Физлицо" readonly required />
+            </label>
+            <button type="button" class="toggle-edit secondary" data-target="client">Изменить</button>
+          </div>
+          <div class="field-row">
+            <label>
+              Название услуги (по умолчанию: Оплата уроков по информатике онлайн)
+              <input
+                type="text"
+                id="serviceName"
+                name="serviceName"
+                value="Оплата уроков по информатике онлайн"
+                readonly
+                required
+              />
+            </label>
+            <button type="button" class="toggle-edit secondary" data-target="serviceName">Изменить</button>
+          </div>
+          <div class="field-row">
+            <label>
+              Основание платежа (по умолчанию: Репетиторские услуги дополнительного обучения по информатике)
+              <input
+                type="text"
+                id="basis"
+                name="basis"
+                value="Репетиторские услуги дополнительного обучения по информатике"
+                readonly
+                required
+              />
+            </label>
+            <button type="button" class="toggle-edit secondary" data-target="basis">Изменить</button>
+          </div>
           <label>
-            День квитанции (по умолчанию сегодня)
-            <input type="date" id="manualNumberDay" />
+            Количество занятий
+            <input type="number" id="quantity" name="quantity" min="1" step="1" value="1" required />
           </label>
           <label>
-            Номер за день
-            <input type="number" id="manualSequence" min="1" step="1" />
+            Цена за 1 занятие, ₽
+            <input type="number" id="unitPrice" name="unitPrice" min="0" step="0.01" required />
           </label>
-        </div>
-        <div class="actions">
-          <button type="button" id="saveManualNumber">Сохранить день и номер</button>
-          <button type="button" id="clearManualNumber" class="secondary">Сбросить</button>
-        </div>
-        <p class="notice" id="manual-number-hint">При сохранении заданные день и номер применятся к следующей квитанции, после чего снова включится авто-нумерация.</p>
+          <div class="field-row">
+            <label>
+              Способ оплаты
+              <input
+                type="text"
+                id="payment"
+                name="payment"
+                value="безналичная (перевод по QR-коду на расчётный счёт ИП)"
+                readonly
+                required
+              />
+            </label>
+            <button type="button" class="toggle-edit secondary" data-target="payment">Изменить</button>
+          </div>
+          <label>
+            Дата платежа (можно заполнить вручную)
+            <input type="date" id="manualDate" name="manualDate" />
+          </label>
+          <label>
+            Время платежа (можно заполнить вручную)
+            <input type="time" id="manualTime" name="manualTime" />
+          </label>
+          <button type="submit">Создать PDF</button>
+        </form>
       </div>
-      <form id="bso-form">
-        <div class="field-row">
-          <label>
-            Клиент (по умолчанию: Физлицо)
-            <input type="text" id="client" name="client" value="Физлицо" readonly required />
-          </label>
-          <button type="button" class="toggle-edit secondary" data-target="client">Изменить</button>
-        </div>
-        <div class="field-row">
-          <label>
-            Название услуги (по умолчанию: Оплата уроков по информатике онлайн)
-            <input
-              type="text"
-              id="serviceName"
-              name="serviceName"
-              value="Оплата уроков по информатике онлайн"
-              readonly
-              required
-            />
-          </label>
-          <button type="button" class="toggle-edit secondary" data-target="serviceName">Изменить</button>
-        </div>
-        <div class="field-row">
-          <label>
-            Основание платежа (по умолчанию: Репетиторские услуги дополнительного обучения по информатике)
-            <input
-              type="text"
-              id="basis"
-              name="basis"
-              value="Репетиторские услуги дополнительного обучения по информатике"
-              readonly
-              required
-            />
-          </label>
-          <button type="button" class="toggle-edit secondary" data-target="basis">Изменить</button>
-        </div>
-        <label>
-          Количество занятий
-          <input type="number" id="quantity" name="quantity" min="1" step="1" value="1" required />
-        </label>
-        <label>
-          Цена за 1 занятие, ₽
-          <input type="number" id="unitPrice" name="unitPrice" min="0" step="0.01" required />
-        </label>
-        <div class="field-row">
-          <label>
-            Способ оплаты
-            <input
-              type="text"
-              id="payment"
-              name="payment"
-              value="безналичная (перевод по QR-коду на расчётный счёт ИП)"
-              readonly
-              required
-            />
-          </label>
-          <button type="button" class="toggle-edit secondary" data-target="payment">Изменить</button>
-        </div>
-        <label>
-          Дата платежа (можно заполнить вручную)
-          <input type="date" id="manualDate" name="manualDate" />
-        </label>
-        <label>
-          Время платежа (можно заполнить вручную)
-          <input type="time" id="manualTime" name="manualTime" />
-        </label>
-        <button type="submit">Создать PDF</button>
-      </form>
     </section>
 
     <section class="section" aria-labelledby="registry-title">
