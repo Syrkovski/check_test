@@ -20,7 +20,8 @@
   const registryBody = document.querySelector('#registry tbody');
   const currentNumberEl = document.getElementById('current-number');
   const toggleButtons = document.querySelectorAll('.toggle-edit');
-  const manualNumberInput = document.getElementById('manualNumber');
+  const manualNumberDayInput = document.getElementById('manualNumberDay');
+  const manualSequenceInput = document.getElementById('manualSequence');
   const saveManualNumberBtn = document.getElementById('saveManualNumber');
   const clearManualNumberBtn = document.getElementById('clearManualNumber');
   const manualDateInput = document.getElementById('manualDate');
@@ -86,7 +87,7 @@
     if (!input) return;
     if (isReadonly) {
       input.setAttribute('readonly', 'readonly');
-      button.textContent = 'Изменить разово';
+      button.textContent = 'Изменить';
     } else {
       input.removeAttribute('readonly');
       button.textContent = 'Зафиксировать';
@@ -179,40 +180,82 @@
     return `${y}${m}${day}`;
   }
 
-  function nextNumber(records, date) {
+  function parseDateValue(value) {
+    if (!value) return null;
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) return null;
+    return new Date(year, month - 1, day);
+  }
+
+  function nextSequenceForDay(records, date) {
     const prefix = todayNumberPrefix(date);
-    const sameDay = records.filter(r => r.date === formatDate(date));
-    const seq = sameDay.length + 1;
-    return `${prefix}-${String(seq).padStart(3, '0')}`;
+    return records.filter(r => typeof r.number === 'string' && r.number.startsWith(prefix)).length + 1;
   }
 
-  function getStoredCustomNumber() {
-    return localStorage.getItem(CUSTOM_NUMBER_KEY) || '';
+  function nextNumber(records, date, sequenceOverride) {
+    const prefixDate = date || new Date();
+    const sequence = Number.isFinite(sequenceOverride) && sequenceOverride > 0
+      ? sequenceOverride
+      : nextSequenceForDay(records, prefixDate);
+    return `${todayNumberPrefix(prefixDate)}-${String(sequence).padStart(3, '0')}`;
   }
 
-  function setCustomNumber(value) {
-    if (value) {
-      localStorage.setItem(CUSTOM_NUMBER_KEY, value);
+  function getStoredCustomNumberParts() {
+    try {
+      const raw = localStorage.getItem(CUSTOM_NUMBER_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+      localStorage.removeItem(CUSTOM_NUMBER_KEY);
+      return null;
+    }
+  }
+
+  function setCustomNumberParts(value) {
+    if (value && value.day && Number.isFinite(Number(value.sequence)) && Number(value.sequence) > 0) {
+      localStorage.setItem(CUSTOM_NUMBER_KEY, JSON.stringify(value));
     } else {
       localStorage.removeItem(CUSTOM_NUMBER_KEY);
     }
-    if (manualNumberInput) {
-      manualNumberInput.value = value;
+
+    if (manualNumberDayInput) {
+      manualNumberDayInput.value = value?.day || manualNumberDayInput.value || formatDateInputValue(new Date());
+    }
+    if (manualSequenceInput) {
+      manualSequenceInput.value = value?.sequence ? String(value.sequence) : manualSequenceInput.value;
     }
     renderCurrentNumber();
   }
 
   function renderManualNumber() {
-    if (manualNumberInput) {
-      manualNumberInput.value = getStoredCustomNumber();
+    const records = loadRecords();
+    const custom = getStoredCustomNumberParts();
+    const defaultDayValue = formatDateInputValue(new Date());
+    if (manualNumberDayInput) {
+      manualNumberDayInput.value = custom?.day || manualNumberDayInput.value || defaultDayValue;
+      manualNumberDayInput.defaultValue = manualNumberDayInput.value || defaultDayValue;
+    }
+    const dayDate = parseDateValue(manualNumberDayInput ? manualNumberDayInput.value : '') || new Date();
+    const nextSeq = nextSequenceForDay(records, dayDate);
+    if (manualSequenceInput) {
+      const sequenceValue = custom?.sequence || Number(manualSequenceInput.value) || nextSeq;
+      manualSequenceInput.value = sequenceValue ? String(sequenceValue) : '';
+      manualSequenceInput.placeholder = String(nextSeq);
+      manualSequenceInput.defaultValue = manualSequenceInput.value;
     }
   }
 
   function renderCurrentNumber() {
     const records = loadRecords();
-    const customNumber = getStoredCustomNumber();
-    const number = customNumber || nextNumber(records, new Date());
-    currentNumberEl.textContent = customNumber
+    const custom = getStoredCustomNumberParts();
+    const defaultDayValue = formatDateInputValue(new Date());
+    const dayValue = custom?.day || (manualNumberDayInput ? manualNumberDayInput.value : '') || defaultDayValue;
+    const dayDate = parseDateValue(dayValue) || new Date();
+    const sequenceCandidate = custom?.sequence || Number(manualSequenceInput ? manualSequenceInput.value : '');
+    const sequence = Number.isFinite(sequenceCandidate) && sequenceCandidate > 0
+      ? sequenceCandidate
+      : nextSequenceForDay(records, dayDate);
+    const number = nextNumber(records, dayDate, sequence);
+    currentNumberEl.textContent = custom
       ? `Следующий номер (принудительно): ${number}`
       : `Следующий номер: ${number}`;
   }
@@ -334,7 +377,13 @@
     const time = normalizeTimeInput(manualTimeInput ? manualTimeInput.value : '') || formatTime(now);
     const quantityValue = Number(document.getElementById('quantity').value);
     const unitPriceValue = Number(document.getElementById('unitPrice').value);
-    const manualNumber = getStoredCustomNumber().trim();
+    const manualNumberParts = getStoredCustomNumberParts();
+    const numberingDayValue = manualNumberParts?.day || (manualNumberDayInput ? manualNumberDayInput.value : '');
+    const numberingDate = parseDateValue(numberingDayValue) || now;
+    const sequenceInputValue = manualNumberParts?.sequence || Number(manualSequenceInput ? manualSequenceInput.value : '');
+    const sequenceForNumber = Number.isFinite(sequenceInputValue) && sequenceInputValue > 0
+      ? sequenceInputValue
+      : nextSequenceForDay(records, numberingDate);
     const clientValue = document.getElementById('client').value.trim() || 'Физлицо';
     const serviceNameValue = document.getElementById('serviceName').value.trim();
     const basisValue = document.getElementById('basis').value.trim() || serviceNameValue;
@@ -351,7 +400,7 @@
 
     const amountValue = Number((unitPriceValue * quantityValue).toFixed(2));
 
-    const recordNumber = manualNumber || nextNumber(records, now);
+    const recordNumber = nextNumber(records, numberingDate, sequenceForNumber);
 
     const record = {
       number: recordNumber,
@@ -370,8 +419,11 @@
 
     records.push(record);
     saveRecords(records);
-    if (manualNumber) {
-      setCustomNumber('');
+    if (manualNumberParts) {
+      setCustomNumberParts(null);
+    }
+    if (manualSequenceInput) {
+      manualSequenceInput.value = '';
     }
     render();
     if (downloadPdf) {
@@ -385,17 +437,45 @@
   registryBody.addEventListener('click', handleRegistryClick);
 
   saveManualNumberBtn.addEventListener('click', () => {
-    const value = manualNumberInput.value.trim();
-    if (!value) {
-      alert('Введите номер в нужном формате.');
+    const dayValue = manualNumberDayInput ? manualNumberDayInput.value : '';
+    const dayDate = parseDateValue(dayValue);
+    const sequenceValue = Number(manualSequenceInput ? manualSequenceInput.value : '');
+    if (!dayDate) {
+      alert('Выберите день квитанции.');
       return;
     }
-    setCustomNumber(value);
+    if (!Number.isFinite(sequenceValue) || sequenceValue <= 0) {
+      alert('Введите корректный номер за день.');
+      return;
+    }
+    setCustomNumberParts({ day: dayValue, sequence: sequenceValue });
   });
 
   clearManualNumberBtn.addEventListener('click', () => {
-    setCustomNumber('');
+    setCustomNumberParts(null);
+    if (manualSequenceInput) {
+      manualSequenceInput.value = '';
+    }
+    render();
   });
+
+  if (manualNumberDayInput) {
+    manualNumberDayInput.addEventListener('change', () => {
+      const dateForNumber = parseDateValue(manualNumberDayInput.value) || new Date();
+      const nextSeq = nextSequenceForDay(loadRecords(), dateForNumber);
+      if (manualSequenceInput && !getStoredCustomNumberParts()) {
+        manualSequenceInput.placeholder = String(nextSeq);
+        if (!manualSequenceInput.value) {
+          manualSequenceInput.value = String(nextSeq);
+        }
+      }
+      renderCurrentNumber();
+    });
+  }
+
+  if (manualSequenceInput) {
+    manualSequenceInput.addEventListener('input', renderCurrentNumber);
+  }
 
   vendorToggleBtn.addEventListener('click', () => {
     vendorForm.classList.toggle('hidden');
